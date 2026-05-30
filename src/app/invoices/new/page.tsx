@@ -850,7 +850,7 @@ export default function NewInvoicePage() {
                               <p className="mt-1 text-xs text-slate-500">
                                 Cost: {money(Number(part.average_cost || part.cost_price || 0))} | Supplier: {part.supplier || "-"}
                               </p>
-                            )})}
+                            )}
                           </div>
 
                           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
@@ -1007,11 +1007,11 @@ export default function NewInvoicePage() {
                             />
                           </td>
 
-                          {isOwner && ({isOwner && (<td className="px-4 py-3"><input type="number" step="0.01" value={line.cost_price} onChange={(e) => updateLine(line.id, "cost_price", e.target.value)} disabled={line.item_type !== "part"} className="w-28 rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100" /></td>)})}
+                          {isOwner && (<td className="px-4 py-3"><input type="number" step="0.01" value={line.cost_price} onChange={(e) => updateLine(line.id, "cost_price", e.target.value)} disabled={line.item_type !== "part"} className="w-28 rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100" /></td>)}
 
-                          {isOwner && ({isOwner && (<td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">{money(lineProfit)}</td>)})}
+                          {isOwner && (<td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">{money(lineProfit)}</td>)}
 
-                          {isOwner && ({isOwner && (<td className="whitespace-nowrap px-4 py-3 text-slate-700">{line.part_id ? `${line.current_stock || 0} -> ${Number(line.current_stock || 0) - Number(line.quantity || 0)}` : "-"}</td>)})}
+                          {isOwner && (<td className="whitespace-nowrap px-4 py-3 text-slate-700">{line.part_id ? `${line.current_stock || 0} -> ${Number(line.current_stock || 0) - Number(line.quantity || 0)}` : "-"}</td>)}
 
                           <td className="px-4 py-3">
                             <button
@@ -1138,6 +1138,7 @@ export default function NewInvoicePage() {
     </main>
   );
 }
+
 
 
 
