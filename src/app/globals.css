@@ -1,26 +1,404 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media print {
+  html,
+  body {
+    background: white !important;
+    overflow: visible !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  main {
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  button,
+  a[href="/invoices"],
+  a[href="/dashboard"],
+  a[href="/jobs"],
+  a[href*="/owner"] {
+    display: none !important;
+  }
+
+  section,
+  aside,
+  table,
+  tr,
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-page-break-before {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  .print-page-break-after {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .print-no-shadow {
+    box-shadow: none !important;
+  }
+
+  .print-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .print-card {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  .min-w-\[800px\],
+  .min-w-\[850px\],
+  .min-w-\[900px\],
+  .min-w-\[1050px\],
+  .min-w-\[1150px\],
+  .min-w-\[1250px\] {
+    min-width: 0 !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 12mm;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  form.no-print,
+  .payment-form-print-hide {
+    display: none !important;
+  }
+}
+
+@media print {
+  .customer-invoice-print-compact {
+    font-size: 11px !important;
+  }
+
+  .customer-invoice-print-compact h2,
+  .customer-invoice-print-compact h3 {
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .customer-invoice-print-compact section,
+  .customer-invoice-print-compact .print-card {
+    padding: 12px !important;
+    margin-top: 10px !important;
+    border-radius: 8px !important;
+  }
+
+  .customer-invoice-print-compact table {
+    font-size: 10px !important;
+  }
+
+  .customer-invoice-print-compact th,
+  .customer-invoice-print-compact td {
+    padding: 5px 6px !important;
+    vertical-align: top !important;
+  }
+
+  .customer-invoice-print-compact .checked-category-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .customer-invoice-print-compact .checked-category-card {
+    padding: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .customer-invoice-print-compact .good-items-print {
+    display: none !important;
+  }
+
+  .customer-invoice-print-compact .privacy-note-print {
+    display: none !important;
+  }
+}
+
+@media print {
+  .owner-copy-print-compact {
+    background: white !important;
+    font-size: 10px !important;
+    color: #020617 !important;
+  }
+
+  .owner-copy-print-compact .no-print {
+    display: none !important;
+  }
+
+  .owner-copy-print-compact .owner-print-container {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .owner-copy-print-compact .owner-print-header {
+    padding: 14px !important;
+    margin-bottom: 10px !important;
+    border-radius: 8px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .owner-copy-print-compact .owner-print-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .owner-copy-print-compact .owner-print-card {
+    padding: 10px !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    border: 1px solid #dbe3ef !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .owner-copy-print-compact .owner-print-card h2,
+  .owner-copy-print-compact .owner-print-card h3 {
+    font-size: 13px !important;
+    margin: 2px 0 6px 0 !important;
+  }
+
+  .owner-copy-print-compact .owner-print-section {
+    padding: 12px !important;
+    margin-top: 10px !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    border: 1px solid #dbe3ef !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .owner-copy-print-compact table {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 8.5px !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  .owner-copy-print-compact th,
+  .owner-copy-print-compact td {
+    padding: 5px 4px !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    vertical-align: top !important;
+  }
+
+  .owner-copy-print-compact .owner-profit-table-wrap {
+    overflow: visible !important;
+  }
+
+  .owner-copy-print-compact .owner-money {
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  .owner-copy-print-compact .owner-description-col {
+    width: 24% !important;
+  }
+
+  .owner-copy-print-compact .owner-small-col {
+    width: 8% !important;
+  }
+
+  .owner-copy-print-compact .owner-medium-col {
+    width: 11% !important;
+  }
+
+  .owner-copy-print-compact .owner-profit-col {
+    width: 11% !important;
+  }
+
+  .owner-copy-print-compact .privacy-note-print {
+    display: none !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 9mm;
+  }
+}
+
+@media print {
+  .owner-profit-table-wrap {
+    display: none !important;
+  }
+
+  .owner-profit-print-list {
+    display: grid !important;
+    gap: 8px !important;
+  }
+
+  .owner-profit-print-row {
+    border: 1px solid #dbe3ef !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .owner-profit-print-title {
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    margin-bottom: 6px !important;
+  }
+
+  .owner-profit-print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 6px !important;
+    font-size: 9px !important;
+  }
+
+  .owner-profit-print-label {
+    color: #64748b !important;
+    font-size: 8px !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+  }
+
+  .owner-profit-print-value {
+    font-weight: 800 !important;
+    color: #020617 !important;
+  }
+
+  .owner-profit-print-profit {
+    color: #008236 !important;
+    font-weight: 900 !important;
+  }
+}
+
+@media screen {
+  .owner-profit-print-list {
+    display: none;
+  }
+}
+
+@media print {
+  .owner-copy-print-compact .owner-profit-table-wrap {
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .owner-copy-print-compact .owner-profit-table-wrap table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: auto !important;
+    font-size: 9.5px !important;
+  }
+
+  .owner-copy-print-compact .owner-profit-table-wrap th,
+  .owner-copy-print-compact .owner-profit-table-wrap td {
+    padding: 6px 5px !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    white-space: normal !important;
+    line-height: 1.25 !important;
+  }
+
+  .owner-copy-print-compact .owner-profit-table-wrap th:last-child,
+  .owner-copy-print-compact .owner-profit-table-wrap td:last-child {
+    min-width: 52px !important;
+    white-space: nowrap !important;
+    text-align: right !important;
+  }
+
+  .owner-copy-print-compact .owner-profit-table-wrap td:nth-child(5),
+  .owner-copy-print-compact .owner-profit-table-wrap td:nth-child(6),
+  .owner-copy-print-compact .owner-profit-table-wrap td:nth-child(7),
+  .owner-copy-print-compact .owner-profit-table-wrap td:nth-child(8),
+  .owner-copy-print-compact .owner-profit-table-wrap td:nth-child(9) {
+    white-space: nowrap !important;
+    text-align: right !important;
+  }
+}
+
+@media print {
+  .owner-copy-print-compact .owner-line-card {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    padding: 10px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .owner-copy-print-compact .owner-line-card p {
+    line-height: 1.25 !important;
+  }
+
+  .owner-copy-print-compact .owner-line-card .rounded-xl {
+    padding: 7px !important;
+    border-radius: 7px !important;
+  }
+
+  .owner-copy-print-compact .owner-line-card .text-base {
+    font-size: 12px !important;
+  }
+
+  .owner-copy-print-compact .owner-line-card .text-sm {
+    font-size: 9px !important;
+  }
+
+  .owner-copy-print-compact .owner-line-card .text-xs {
+    font-size: 8px !important;
+  }
 }
