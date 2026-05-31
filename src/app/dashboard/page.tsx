@@ -338,10 +338,10 @@ export default function DashboardPage() {
       setMessage(errors.join(" | "));
     }
 
-    setJobs((jobRes.data || []) as Job[]);
-    setInvoices((invoiceRes.data || []) as Invoice[]);
-    setPurchaseInvoices((purchaseRes.data || []) as PurchaseInvoice[]);
-    setExpenses((expenseRes.data || []) as ShopExpense[]);
+    setJobs((jobRes.data || []) as unknown as Job[]);
+    setInvoices((invoiceRes.data || []) as unknown as Invoice[]);
+    setPurchaseInvoices((purchaseRes.data || []) as unknown as PurchaseInvoice[]);
+    setExpenses((expenseRes.data || []) as unknown as ShopExpense[]);
     setParts((partsRes.data || []) as Part[]);
     setLoading(false);
   }
@@ -742,6 +742,7 @@ export default function DashboardPage() {
     </main>
   );
 }
+
 
 
 

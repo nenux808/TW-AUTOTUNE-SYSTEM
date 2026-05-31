@@ -110,11 +110,11 @@ export default function ServiceReminderWidget() {
     if (jobsRes.error) {
       setMessage(jobsRes.error.message);
     } else {
-      setJobs((jobsRes.data || []) as ReminderJob[]);
+      setJobs((jobsRes.data || []) as unknown as ReminderJob[]);
     }
 
     if (!logsRes.error) {
-      setLogs((logsRes.data || []) as EmailLog[]);
+      setLogs((logsRes.data || []) as unknown as EmailLog[]);
     }
 
     setLoading(false);
@@ -303,3 +303,4 @@ export default function ServiceReminderWidget() {
     </section>
   );
 }
+

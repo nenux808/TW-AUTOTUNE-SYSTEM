@@ -1,4 +1,4 @@
-export type Customer = {
+﻿export type Customer = {
   id: string;
   full_name: string;
   phone: string;
@@ -8,4 +8,8 @@ export type Customer = {
   notes: string | null;
   status: string;
   created_at: string;
+  active?: boolean;
 };
+
+
+
