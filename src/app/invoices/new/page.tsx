@@ -536,6 +536,29 @@ export default function NewInvoicePage() {
     const amountPaid = paymentStatus === "paid" ? total : 0;
     const balanceDue = total - amountPaid;
 
+    const { data: existingInvoiceCheck, error: existingInvoiceError } = await supabase
+      .from("invoices")
+      .select("id, invoice_number")
+      .eq("job_id", job.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingInvoiceError) {
+      setMessage(existingInvoiceError.message);
+      setSaving(false);
+      return;
+    }
+
+    if (existingInvoiceCheck) {
+      setMessage(
+        `This job already has invoice INV-${String(existingInvoiceCheck.invoice_number).padStart(5, "0")}. Opening existing invoice instead.`
+      );
+      setSaving(false);
+      router.push(`/invoices/${existingInvoiceCheck.id}`);
+      return;
+    }
+
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .insert({
@@ -1138,6 +1161,7 @@ export default function NewInvoicePage() {
     </main>
   );
 }
+
 
 
 
