@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useCurrentRole } from "@/hooks/useCurrentRole";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type JobData = {
@@ -115,6 +115,7 @@ function makeId() {
 export default function NewInvoicePage() {
   const { isOwner } = useCurrentRole();
   const supabase = createClient();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const jobId = searchParams.get("job_id") || searchParams.get("jobId") || "";
 
@@ -1161,6 +1162,7 @@ export default function NewInvoicePage() {
     </main>
   );
 }
+
 
 
 
