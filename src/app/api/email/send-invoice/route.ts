@@ -1,14 +1,23 @@
 ﻿import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { appUrl, formatInvoiceNumber, formatMoney, fromEmail, resend } from "@/lib/email/resend";
+import {
+  appUrl,
+  formatInvoiceNumber,
+  formatMoney,
+  fromEmail,
+  resend,
+} from "@/lib/email/resend";
 
 export async function POST(request: Request) {
   try {
     const { invoiceId } = await request.json();
 
     if (!invoiceId) {
-      return NextResponse.json({ error: "invoiceId is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "invoiceId is required." },
+        { status: 400 }
+      );
     }
 
     const supabase = await createServerSupabaseClient();
@@ -24,13 +33,19 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !invoice) {
-      return NextResponse.json({ error: error?.message || "Invoice not found." }, { status: 404 });
+      return NextResponse.json(
+        { error: error?.message || "Invoice not found." },
+        { status: 404 }
+      );
     }
 
     const customerEmail = invoice.customers?.email;
 
     if (!customerEmail) {
-      return NextResponse.json({ error: "Customer does not have an email address." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Customer does not have an email address." },
+        { status: 400 }
+      );
     }
 
     const invoiceNumber = formatInvoiceNumber(invoice.invoice_number);
@@ -49,11 +64,28 @@ export async function POST(request: Request) {
         .eq("id", invoice.id);
 
       if (tokenError) {
-        return NextResponse.json({ error: tokenError.message }, { status: 500 });
+        return NextResponse.json(
+          { error: tokenError.message },
+          { status: 500 }
+        );
+      }
+    } else if (!invoice.public_enabled) {
+      const { error: enableError } = await supabase
+        .from("invoices")
+        .update({
+          public_enabled: true,
+        })
+        .eq("id", invoice.id);
+
+      if (enableError) {
+        return NextResponse.json(
+          { error: enableError.message },
+          { status: 500 }
+        );
       }
     }
 
-    const invoiceLink = `${appUrl()}/invoice-view/${publicToken}`;
+    const invoiceLink = `${appUrl().replace(/\/$/, "")}/invoice-view/${publicToken}`;
 
     const subject = `${invoiceNumber} - TW AUTO TUNE Invoice`;
 
@@ -66,7 +98,7 @@ export async function POST(request: Request) {
 
         <p>Hi ${invoice.customers?.full_name || "Customer"},</p>
 
-        <p>Your invoice is ready.</p>
+        <p>Your invoice is ready. Please click the button below to view the full customer copy invoice and service report.</p>
 
         <table style="border-collapse: collapse; width: 100%; max-width: 520px;">
           <tr>
@@ -90,7 +122,7 @@ export async function POST(request: Request) {
         </table>
 
         <p style="margin-top: 24px;">
-          <a href="${invoiceLink}" style="background:#dc2626;color:white;padding:12px 18px;text-decoration:none;border-radius:10px;font-weight:bold;">
+          <a href="${invoiceLink}" style="background:#dc2626;color:white;padding:12px 18px;text-decoration:none;border-radius:10px;font-weight:bold;display:inline-block;">
             View Invoice
           </a>
         </p>
@@ -123,18 +155,17 @@ export async function POST(request: Request) {
     });
 
     if (sendResult.error) {
-      return NextResponse.json({ error: sendResult.error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: sendResult.error.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ ok: true, messageId: providerId });
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || "Failed to send invoice email." }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || "Failed to send invoice email." },
+      { status: 500 }
+    );
   }
 }
-
-
-
-
-
-
-

@@ -26,6 +26,23 @@ function cleanText(value: any) {
   return String(value).replaceAll("_", " ");
 }
 
+function ReportBox({
+  title,
+  value,
+}: {
+  title: string;
+  value?: string | null;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <h3 className="font-semibold text-slate-900">{title}</h3>
+      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
+        {value || "No details recorded."}
+      </p>
+    </div>
+  );
+}
+
 export default async function PublicInvoicePage({ params }: PageProps) {
   const { token } = await params;
   const supabase = await createServerSupabaseClient();
@@ -47,6 +64,13 @@ export default async function PublicInvoicePage({ params }: PageProps) {
         billing_mode,
         included_note,
         sort_order
+      ),
+      job_cards(
+        id,
+        attention,
+        repair_report,
+        work_completed,
+        technician_notes
       )
     `)
     .eq("public_token", token)
@@ -55,14 +79,13 @@ export default async function PublicInvoicePage({ params }: PageProps) {
 
   if (error || !invoice) {
     return (
-      <main className="min-h-screen bg-slate-100 p-6">
+      <main className="min-h-screen bg-slate-100 px-6 py-10 text-slate-950">
         <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow-sm">
-          <p className="text-sm font-medium text-red-600">TW AUTO TUNE</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
-            Invoice not available
-          </h1>
-          <p className="mt-3 text-slate-600">
-            This invoice link is invalid or no longer available. Please contact TW AUTO TUNE.
+          <p className="text-sm font-bold text-red-600">TW AUTO TUNE</p>
+          <h1 className="mt-3 text-2xl font-bold">Invoice not available</h1>
+          <p className="mt-3 text-sm text-slate-600">
+            This invoice link is invalid or no longer available. Please contact
+            TW AUTO TUNE.
           </p>
         </div>
       </main>
@@ -76,13 +99,19 @@ export default async function PublicInvoicePage({ params }: PageProps) {
 
   const invoiceItems = (invoice.invoice_items || [])
     .filter((item: any) => item.visibility !== "owner_only")
-    .sort((a: any, b: any) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+    .sort(
+      (a: any, b: any) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
+    );
+
+  const jobCard = Array.isArray(invoice.job_cards)
+    ? invoice.job_cards[0]
+    : invoice.job_cards;
 
   return (
-    <main className="min-h-screen bg-slate-100 p-6 print:bg-white">
+    <main className="min-h-screen bg-slate-100 px-6 py-6 text-slate-950">
       <div className="mx-auto max-w-6xl">
         <section className="rounded-2xl bg-slate-950 p-6 text-white shadow-sm">
-          <p className="text-sm font-medium text-red-400">TW AUTO TUNE</p>
+          <p className="text-sm font-bold text-red-500">TW AUTO TUNE</p>
 
           <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -133,7 +162,8 @@ export default async function PublicInvoicePage({ params }: PageProps) {
 
             <div className="mt-4 space-y-2 text-sm text-slate-700">
               <p>
-                Vehicle: {invoice.vehicles?.make || ""} {invoice.vehicles?.model || ""}
+                Vehicle: {invoice.vehicles?.make || ""}{" "}
+                {invoice.vehicles?.model || ""}
               </p>
               <p>Year: {invoice.vehicles?.year || "-"}</p>
               <p>VIN: {invoice.vehicles?.vin || "-"}</p>
@@ -161,18 +191,26 @@ export default async function PublicInvoicePage({ params }: PageProps) {
                 <tbody>
                   {invoiceItems.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                      <td
+                        colSpan={5}
+                        className="px-4 py-6 text-center text-slate-500"
+                      >
                         No customer-visible invoice items.
                       </td>
                     </tr>
                   ) : (
                     invoiceItems.map((item: any) => {
                       const lineTotal =
-                        Number(item.quantity || 0) * Number(item.unit_price || 0);
-                      const isIncluded = item.billing_mode === "included_in_package";
+                        Number(item.quantity || 0) *
+                        Number(item.unit_price || 0);
+                      const isIncluded =
+                        item.billing_mode === "included_in_package";
 
                       return (
-                        <tr key={item.id} className="border-t border-slate-200">
+                        <tr
+                          key={item.id}
+                          className="border-t border-slate-200"
+                        >
                           <td className="px-4 py-3 capitalize text-slate-700">
                             {cleanText(item.item_type)}
                           </td>
@@ -192,7 +230,9 @@ export default async function PublicInvoicePage({ params }: PageProps) {
                           </td>
 
                           <td className="px-4 py-3 text-slate-700">
-                            {isIncluded ? "Included" : money(Number(item.unit_price || 0))}
+                            {isIncluded
+                              ? "Included"
+                              : money(Number(item.unit_price || 0))}
                           </td>
 
                           <td className="px-4 py-3 font-semibold text-slate-900">
@@ -205,6 +245,37 @@ export default async function PublicInvoicePage({ params }: PageProps) {
                 </tbody>
               </table>
             </div>
+
+            <section className="mt-8">
+              <p className="text-sm font-medium text-red-600">
+                Service / Repair Report
+              </p>
+              <h2 className="mt-1 text-2xl font-bold text-slate-900">
+                Customer Copy Report
+              </h2>
+
+              <div className="mt-5 grid gap-4">
+                <ReportBox
+                  title="Customer Attention / Concern"
+                  value={jobCard?.attention}
+                />
+
+                <ReportBox
+                  title="Repair Report"
+                  value={jobCard?.repair_report}
+                />
+
+                <ReportBox
+                  title="Work Completed"
+                  value={jobCard?.work_completed}
+                />
+
+                <ReportBox
+                  title="Technician Notes"
+                  value={jobCard?.technician_notes}
+                />
+              </div>
+            </section>
           </div>
 
           <div className="rounded-2xl bg-slate-950 p-6 text-white shadow-sm">
@@ -251,4 +322,3 @@ export default async function PublicInvoicePage({ params }: PageProps) {
     </main>
   );
 }
-
