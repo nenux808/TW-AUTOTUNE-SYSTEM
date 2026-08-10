@@ -26,6 +26,23 @@ function cleanText(value: any) {
   return String(value).replaceAll("_", " ");
 }
 
+function ReportBox({
+  title,
+  value,
+}: {
+  title: string;
+  value?: string | null;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <h3 className="font-semibold text-slate-900">{title}</h3>
+      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
+        {value || "No details recorded."}
+      </p>
+    </div>
+  );
+}
+
 export default async function PublicInvoicePage({ params }: PageProps) {
   const { token } = await params;
   const supabase = await createServerSupabaseClient();
@@ -36,6 +53,14 @@ export default async function PublicInvoicePage({ params }: PageProps) {
       *,
       customers(full_name, email, phone, address),
       vehicles(registration, make, model, year, vin),
+      jobs(
+        id,
+        customer_complaint,
+        diagnosis_summary,
+        work_completed,
+        technician_notes,
+        odometer
+      ),
       invoice_items(
         id,
         item_type,
@@ -46,6 +71,7 @@ export default async function PublicInvoicePage({ params }: PageProps) {
         visibility,
         billing_mode,
         included_note,
+        status,
         sort_order
       )
     `)
@@ -78,6 +104,13 @@ export default async function PublicInvoicePage({ params }: PageProps) {
     .sort(
       (a: any, b: any) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
     );
+
+  const job = Array.isArray(invoice.jobs) ? invoice.jobs[0] : invoice.jobs;
+
+  const attentionItems = invoiceItems.filter(
+    (item: any) =>
+      item.status === "attention_required" || item.status === "urgent"
+  );
 
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-6 text-slate-950">
@@ -139,6 +172,7 @@ export default async function PublicInvoicePage({ params }: PageProps) {
               </p>
               <p>Year: {invoice.vehicles?.year || "-"}</p>
               <p>VIN: {invoice.vehicles?.vin || "-"}</p>
+              {job?.odometer && <p>Odometer: {job.odometer}</p>}
             </div>
           </div>
         </section>
@@ -225,15 +259,63 @@ export default async function PublicInvoicePage({ params }: PageProps) {
               </table>
             </div>
 
-            <section className="mt-8 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-              <p className="text-sm font-semibold text-yellow-800">
+            <section className="mt-8">
+              <p className="text-sm font-medium text-red-600">
                 Service / Repair Report
               </p>
-              <p className="mt-2 text-sm text-yellow-700">
-                Service report details are not connected to this public invoice
-                view yet. Invoice charges and customer-visible items are shown
-                above.
-              </p>
+              <h2 className="mt-1 text-2xl font-bold text-slate-900">
+                Customer Copy Report
+              </h2>
+
+              <div className="mt-5 grid gap-4">
+                <ReportBox
+                  title="Customer Complaint / Request"
+                  value={job?.customer_complaint}
+                />
+
+                <ReportBox
+                  title="Diagnosis Summary"
+                  value={job?.diagnosis_summary}
+                />
+
+                <ReportBox
+                  title="Work Completed"
+                  value={job?.work_completed}
+                />
+
+                <ReportBox
+                  title="Technician Notes"
+                  value={job?.technician_notes}
+                />
+
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                  <h3 className="font-semibold text-red-700">
+                    Attention Required / Monitor Items
+                  </h3>
+
+                  {attentionItems.length === 0 ? (
+                    <p className="mt-2 text-sm text-red-700">
+                      No attention required items recorded.
+                    </p>
+                  ) : (
+                    <div className="mt-3 space-y-3">
+                      {attentionItems.map((item: any) => (
+                        <div key={item.id} className="text-sm text-red-800">
+                          <p className="font-semibold">
+                            {item.description || "-"}
+                          </p>
+
+                          {item.included_note && (
+                            <p className="mt-1 text-red-700">
+                              {item.included_note}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </section>
           </div>
 
