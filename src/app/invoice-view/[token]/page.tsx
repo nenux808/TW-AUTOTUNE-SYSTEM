@@ -26,23 +26,6 @@ function cleanText(value: any) {
   return String(value).replaceAll("_", " ");
 }
 
-function ReportBox({
-  title,
-  value,
-}: {
-  title: string;
-  value?: string | null;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <h3 className="font-semibold text-slate-900">{title}</h3>
-      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
-        {value || "No details recorded."}
-      </p>
-    </div>
-  );
-}
-
 export default async function PublicInvoicePage({ params }: PageProps) {
   const { token } = await params;
   const supabase = await createServerSupabaseClient();
@@ -64,13 +47,6 @@ export default async function PublicInvoicePage({ params }: PageProps) {
         billing_mode,
         included_note,
         sort_order
-      ),
-      job_cards(
-        id,
-        attention,
-        repair_report,
-        work_completed,
-        technician_notes
       )
     `)
     .eq("public_token", token)
@@ -102,10 +78,6 @@ export default async function PublicInvoicePage({ params }: PageProps) {
     .sort(
       (a: any, b: any) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
     );
-
-  const jobCard = Array.isArray(invoice.job_cards)
-    ? invoice.job_cards[0]
-    : invoice.job_cards;
 
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-6 text-slate-950">
@@ -203,6 +175,7 @@ export default async function PublicInvoicePage({ params }: PageProps) {
                       const lineTotal =
                         Number(item.quantity || 0) *
                         Number(item.unit_price || 0);
+
                       const isIncluded =
                         item.billing_mode === "included_in_package";
 
@@ -216,17 +189,23 @@ export default async function PublicInvoicePage({ params }: PageProps) {
                           </td>
 
                           <td className="px-4 py-3 font-semibold text-slate-900">
-                            {item.description}
+                            {item.description || "-"}
 
                             {isIncluded && (
                               <p className="mt-1 text-xs font-normal text-blue-600">
                                 Included in selected service package
                               </p>
                             )}
+
+                            {item.included_note && (
+                              <p className="mt-1 text-xs font-normal text-slate-500">
+                                {item.included_note}
+                              </p>
+                            )}
                           </td>
 
                           <td className="px-4 py-3 text-slate-700">
-                            {item.quantity}
+                            {item.quantity || 0}
                           </td>
 
                           <td className="px-4 py-3 text-slate-700">
@@ -246,35 +225,15 @@ export default async function PublicInvoicePage({ params }: PageProps) {
               </table>
             </div>
 
-            <section className="mt-8">
-              <p className="text-sm font-medium text-red-600">
+            <section className="mt-8 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+              <p className="text-sm font-semibold text-yellow-800">
                 Service / Repair Report
               </p>
-              <h2 className="mt-1 text-2xl font-bold text-slate-900">
-                Customer Copy Report
-              </h2>
-
-              <div className="mt-5 grid gap-4">
-                <ReportBox
-                  title="Customer Attention / Concern"
-                  value={jobCard?.attention}
-                />
-
-                <ReportBox
-                  title="Repair Report"
-                  value={jobCard?.repair_report}
-                />
-
-                <ReportBox
-                  title="Work Completed"
-                  value={jobCard?.work_completed}
-                />
-
-                <ReportBox
-                  title="Technician Notes"
-                  value={jobCard?.technician_notes}
-                />
-              </div>
+              <p className="mt-2 text-sm text-yellow-700">
+                Service report details are not connected to this public invoice
+                view yet. Invoice charges and customer-visible items are shown
+                above.
+              </p>
             </section>
           </div>
 
