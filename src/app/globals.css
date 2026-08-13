@@ -120,7 +120,111 @@ body {
 
 @media print {
   .customer-invoice-print-compact {
+    color: #0f172a !important;
     font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  .customer-invoice-print-compact > div {
+    max-width: none !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-header.print-card {
+    margin: 0 0 4mm !important;
+    padding: 4mm 5mm !important;
+    border-radius: 3mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-header h1 {
+    margin: 1mm 0 0 !important;
+    font-size: 19px !important;
+    line-height: 1.2 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-header p {
+    margin-top: 1mm !important;
+  }
+
+  .customer-invoice-print-compact section.invoice-print-meta {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 3mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-meta .print-card {
+    min-width: 0 !important;
+    padding: 3.5mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-meta .mt-4 {
+    margin-top: 2mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-meta .gap-2 {
+    gap: 1mm !important;
+  }
+
+  .customer-invoice-print-compact section.invoice-print-body {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 62mm !important;
+    align-items: start !important;
+    gap: 3mm !important;
+    margin-top: 4mm !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    padding: 0 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-charges,
+  .customer-invoice-print-compact .invoice-print-aside {
+    min-width: 0 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-aside {
+    gap: 3mm !important;
+    break-before: auto !important;
+    page-break-before: auto !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-aside .print-card,
+  .customer-invoice-print-compact .invoice-print-aside > div,
+  .customer-invoice-print-compact .invoice-print-aside > p {
+    margin: 0 !important;
+    padding: 3.5mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-aside .mt-4,
+  .customer-invoice-print-compact .invoice-print-aside .mt-3 {
+    margin-top: 2mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-aside .gap-3,
+  .customer-invoice-print-compact .invoice-print-aside .gap-2 {
+    gap: 1.5mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-charges .mt-6 {
+    margin-top: 3mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-charges .mt-4 {
+    margin-top: 2mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-charges .gap-4 {
+    gap: 2mm !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-charges .rounded-xl {
+    border-radius: 2mm !important;
+  }
+
+  .customer-invoice-print-compact section.invoice-inspection-print {
+    break-before: page !important;
+    page-break-before: always !important;
+    margin-top: 0 !important;
   }
 
   .customer-invoice-print-compact h2,
@@ -166,6 +270,11 @@ body {
 
   .customer-invoice-print-compact .privacy-note-print {
     display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 10mm;
   }
 }
 

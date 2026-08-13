@@ -498,7 +498,7 @@ export default function CustomerInvoicePage() {
   return (
     <main className="customer-invoice-print-compact min-h-screen w-full overflow-x-hidden bg-slate-100 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-[1200px]">
-        <div className="print-card mb-6 flex flex-col gap-4 rounded-2xl bg-slate-950 p-6 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="invoice-print-header print-card mb-6 flex flex-col gap-4 rounded-2xl bg-slate-950 p-6 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-red-300">TW AUTO TUNE</p>
             <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
@@ -541,7 +541,7 @@ export default function CustomerInvoicePage() {
           </div>
         )}
 
-        <section className="grid gap-6 lg:grid-cols-3 print-avoid-break">
+        <section className="invoice-print-meta grid gap-6 lg:grid-cols-3 print-avoid-break">
           <div className="print-card rounded-2xl bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-red-600">Invoice Details</p>
             <h2 className="mt-1 text-xl font-bold text-slate-900">
@@ -595,8 +595,8 @@ export default function CustomerInvoicePage() {
           </div>
         </section>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px] print-full-width">
-          <div className="print-card rounded-2xl bg-white p-6 shadow-sm">
+        <section className="invoice-print-body mt-6 grid gap-6 lg:grid-cols-[1fr_340px] print-full-width">
+          <div className="invoice-print-charges print-card rounded-2xl bg-white p-6 shadow-sm">
             <div>
               <p className="text-sm font-medium text-red-600">Invoice Items</p>
               <h2 className="mt-1 text-xl font-bold text-slate-900">Charges</h2>
@@ -685,7 +685,7 @@ export default function CustomerInvoicePage() {
             )}
           </div>
 
-          <aside className="grid gap-6 print-page-break-before">
+          <aside className="invoice-print-aside grid gap-6">
             <div className="print-card rounded-2xl bg-slate-950 p-6 text-white shadow-sm">
               <p className="text-sm text-red-300">Payment Summary</p>
 
@@ -873,7 +873,7 @@ export default function CustomerInvoicePage() {
           </aside>
         </section>
 
-        <section className="print-card mt-6 rounded-2xl bg-white p-6 shadow-sm">
+        <section className="invoice-inspection-print print-card mt-6 rounded-2xl bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-red-600">Inspection Report</p>
@@ -1063,15 +1063,3 @@ export default function CustomerInvoicePage() {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
