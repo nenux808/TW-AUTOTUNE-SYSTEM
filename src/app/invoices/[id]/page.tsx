@@ -498,7 +498,150 @@ export default function CustomerInvoicePage() {
   return (
     <main className="customer-invoice-print-compact min-h-screen w-full overflow-x-hidden bg-slate-100 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-[1200px]">
-        <div className="invoice-print-header print-card mb-6 flex flex-col gap-4 rounded-2xl bg-slate-950 p-6 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <section className="invoice-print-only" aria-label="Printable customer invoice">
+          <header className="invoice-print-sheet-header">
+            <div>
+              <p className="invoice-print-brand">TW AUTO TUNE</p>
+              <h1>Tax Invoice {formatInvoiceNumber(invoice.invoice_number)}</h1>
+              <p>Customer invoice and service summary</p>
+            </div>
+            <div className="invoice-print-business">
+              <strong>{settings?.business_name || "TW AUTO TUNE"}</strong>
+              <span>
+                {[settings?.address_line_1, settings?.address_line_2]
+                  .filter(Boolean)
+                  .join(", ") || "Unit 2/119 Box St, Dandenong South"}
+              </span>
+              <span>{settings?.phone || "0403 965 946"}</span>
+              {settings?.abn && <span>ABN {settings.abn}</span>}
+            </div>
+          </header>
+
+          <div className="invoice-print-details-grid">
+            <div className="invoice-print-detail-block">
+              <h2>Invoice</h2>
+              <p><strong>Number</strong><span>{formatInvoiceNumber(invoice.invoice_number)}</span></p>
+              <p><strong>Date</strong><span>{formatDate(invoice.invoice_date)}</span></p>
+              <p><strong>Due</strong><span>{formatDate(invoice.due_date)}</span></p>
+              <p><strong>Job</strong><span>{formatJobNumber(invoice.jobs?.job_number)}</span></p>
+              <p><strong>Status</strong><span className="capitalize">{formatStatus(invoice.status)}</span></p>
+            </div>
+
+            <div className="invoice-print-detail-block">
+              <h2>Customer</h2>
+              <p className="invoice-print-primary">{invoice.customers?.full_name || "-"}</p>
+              <p><strong>Phone</strong><span>{invoice.customers?.phone || "-"}</span></p>
+              <p><strong>Email</strong><span>{invoice.customers?.email || "-"}</span></p>
+              <p><strong>Address</strong><span>{invoice.customers?.address || "-"}</span></p>
+            </div>
+
+            <div className="invoice-print-detail-block">
+              <h2>Vehicle</h2>
+              <p className="invoice-print-primary uppercase">{invoice.vehicles?.registration || "-"}</p>
+              <p>
+                <strong>Vehicle</strong>
+                <span>{[invoice.vehicles?.make, invoice.vehicles?.model].filter(Boolean).join(" ") || "-"}</span>
+              </p>
+              <p><strong>Year</strong><span>{invoice.vehicles?.year || "-"}</span></p>
+              <p><strong>VIN</strong><span>{invoice.vehicles?.vin || "-"}</span></p>
+              <p>
+                <strong>Odometer</strong>
+                <span>{invoice.jobs?.odometer ? `${invoice.jobs.odometer.toLocaleString()} km` : "-"}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="invoice-print-lines">
+            <h2>Invoice items</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Type</th>
+                  <th>Qty</th>
+                  <th>Unit price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customerVisibleItems.length === 0 ? (
+                  <tr><td colSpan={5}>No invoice items found.</td></tr>
+                ) : (
+                  customerVisibleItems.map((item) => {
+                    const lineTotal = Number(item.quantity || 0) * Number(item.unit_price || 0);
+                    return (
+                      <tr key={`print-${item.id}`}>
+                        <td>{item.description}</td>
+                        <td className="capitalize">{formatStatus(item.item_type)}</td>
+                        <td>{item.quantity}</td>
+                        <td>{item.billing_mode === "included_in_package" ? "Included" : money(Number(item.unit_price || 0))}</td>
+                        <td>{itemDisplayAmount(item, lineTotal)}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="invoice-print-bottom-grid">
+            <div className="invoice-print-service-info">
+              {invoice.jobs?.customer_complaint && (
+                <div><h3>Customer request</h3><p>{invoice.jobs.customer_complaint}</p></div>
+              )}
+              {invoice.jobs?.work_completed && (
+                <div><h3>Work completed</h3><p>{invoice.jobs.work_completed}</p></div>
+              )}
+              {invoice.jobs?.recommendations && (
+                <div><h3>Recommendations</h3><p>{invoice.jobs.recommendations}</p></div>
+              )}
+              {nextServiceText && (
+                <div><h3>Next service</h3><p>{nextServiceText}</p></div>
+              )}
+              {invoice.notes && (
+                <div><h3>Customer notes</h3><p>{invoice.notes}</p></div>
+              )}
+              {payments.length > 0 && (
+                <div>
+                  <h3>Payment received</h3>
+                  <p>
+                    {payments.map((payment) =>
+                      `${money(Number(payment.amount || 0))} - ${formatStatus(payment.payment_method)} - ${formatDate(payment.payment_date)}`
+                    ).join(" | ")}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="invoice-print-financials">
+              <div className="invoice-print-total-box">
+                <p><span>Subtotal</span><strong>{money(Number(invoice.subtotal || 0))}</strong></p>
+                {Number(invoice.discount_amount || 0) > 0 && (
+                  <p><span>Discount</span><strong>-{money(Number(invoice.discount_amount || 0))}</strong></p>
+                )}
+                <p><span>GST</span><strong>{money(Number(invoice.gst_amount || 0))}</strong></p>
+                <p className="invoice-print-grand-total"><span>Total</span><strong>{money(Number(invoice.total_amount || 0))}</strong></p>
+                <p><span>Paid</span><strong>{money(paidTotal)}</strong></p>
+                <p><span>Balance due</span><strong>{money(balanceDue)}</strong></p>
+              </div>
+
+              <div className="invoice-print-bank-box">
+                <h3>Direct deposit</h3>
+                <p><strong>Bank</strong><span>{settings?.bank_name || "TO BE ADDED"}</span></p>
+                <p><strong>Account</strong><span>{settings?.bank_account_name || "TW AUTO TUNE"}</span></p>
+                <p><strong>BSB</strong><span>{settings?.bank_bsb || "000-000"}</span></p>
+                <p><strong>Account no.</strong><span>{settings?.bank_account_number || "000000000"}</span></p>
+                <p><strong>Reference</strong><span>{formatInvoiceNumber(invoice.invoice_number)}</span></p>
+              </div>
+            </div>
+          </div>
+
+          <footer className="invoice-print-footer">
+            {settings?.invoice_footer_note || "Thank you for choosing TW AUTO TUNE."}
+          </footer>
+        </section>
+
+        <div className="invoice-screen-print-source invoice-print-header print-card mb-6 flex flex-col gap-4 rounded-2xl bg-slate-950 p-6 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-red-300">TW AUTO TUNE</p>
             <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
@@ -536,12 +679,12 @@ export default function CustomerInvoicePage() {
         </div>
 
         {message && (
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
+          <div className="no-print mb-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
             {message}
           </div>
         )}
 
-        <section className="invoice-print-meta grid gap-6 lg:grid-cols-3 print-avoid-break">
+        <section className="invoice-screen-print-source invoice-print-meta grid gap-6 lg:grid-cols-3 print-avoid-break">
           <div className="print-card rounded-2xl bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-red-600">Invoice Details</p>
             <h2 className="mt-1 text-xl font-bold text-slate-900">
@@ -595,7 +738,7 @@ export default function CustomerInvoicePage() {
           </div>
         </section>
 
-        <section className="invoice-print-body mt-6 grid gap-6 lg:grid-cols-[1fr_340px] print-full-width">
+        <section className="invoice-screen-print-source invoice-print-body mt-6 grid gap-6 lg:grid-cols-[1fr_340px] print-full-width">
           <div className="invoice-print-charges print-card rounded-2xl bg-white p-6 shadow-sm">
             <div>
               <p className="text-sm font-medium text-red-600">Invoice Items</p>
@@ -1063,3 +1206,13 @@ export default function CustomerInvoicePage() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
