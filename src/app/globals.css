@@ -470,6 +470,11 @@ body {
     display: none !important;
   }
 
+  .customer-invoice-print-compact section.invoice-screen-print-source,
+  .customer-invoice-print-compact div.invoice-screen-print-source {
+    display: none !important;
+  }
+
   @page {
     size: A4;
     margin: 10mm;
