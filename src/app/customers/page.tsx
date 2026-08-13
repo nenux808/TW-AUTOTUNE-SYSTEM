@@ -50,6 +50,30 @@ export default function CustomersPage() {
     setMessage("Customer deleted successfully.");
     await loadCustomers();
   }
+
+  async function updateCustomer(
+    customerId: string,
+    updates: Pick<
+      Customer,
+      "full_name" | "phone" | "email" | "address" | "customer_type" | "notes" | "status"
+    >
+  ) {
+    setMessage("");
+
+    const { error } = await supabase
+      .from("customers")
+      .update(updates)
+      .eq("id", customerId);
+
+    if (error) {
+      return error.message;
+    }
+
+    setMessage("Customer details updated successfully.");
+    await loadCustomers();
+    return null;
+  }
+
   useEffect(() => {
     loadCustomers();
   }, []);
@@ -94,13 +118,14 @@ export default function CustomersPage() {
               Loading customers...
             </div>
           ) : (
-            <CustomerList customers={customers} onDeleteCustomer={deleteCustomer} />
+            <CustomerList
+              customers={customers}
+              onDeleteCustomer={deleteCustomer}
+              onUpdateCustomer={updateCustomer}
+            />
           )}
         </div>
       </div>
     </main>
   );
 }
-
-
-
