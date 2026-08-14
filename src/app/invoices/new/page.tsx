@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -126,6 +126,8 @@ export default function NewInvoicePage() {
   const [partSearch, setPartSearch] = useState("");
   const [labourRate, setLabourRate] = useState(100);
   const [gstRate, setGstRate] = useState(10);
+  const [gstEnabled, setGstEnabled] = useState(true);
+  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
   const [lines, setLines] = useState<InvoiceLine[]>([]);
   const [notes, setNotes] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
@@ -137,17 +139,11 @@ export default function NewInvoicePage() {
 
   const filteredParts = useMemo(() => {
     const query = partSearch.trim().toLowerCase();
-
     if (!query) return parts.slice(0, 8);
 
     return parts
       .filter((part) => {
-        const searchable = [
-          part.part_name,
-          part.part_number,
-          part.category,
-          part.supplier,
-        ]
+        const searchable = [part.part_name, part.part_number, part.category, part.supplier]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
@@ -161,9 +157,12 @@ export default function NewInvoicePage() {
     return lines.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
   }, [lines]);
 
+  const gstForcedOn = paymentMethod === "eftpos" || paymentMethod === "bank_transfer";
+  const finalGstEnabled = gstForcedOn || gstEnabled;
+
   const gstAmount = useMemo(() => {
-    return subtotal * (gstRate / 100);
-  }, [subtotal, gstRate]);
+    return finalGstEnabled ? subtotal * (gstRate / 100) : 0;
+  }, [finalGstEnabled, subtotal, gstRate]);
 
   const total = useMemo(() => {
     return subtotal + gstAmount;
@@ -176,13 +175,8 @@ export default function NewInvoicePage() {
     }, 0);
   }, [lines]);
 
-  const totalProfit = useMemo(() => {
-    return subtotal - totalCost;
-  }, [subtotal, totalCost]);
-
-  const profitMargin = useMemo(() => {
-    return subtotal > 0 ? (totalProfit / subtotal) * 100 : 0;
-  }, [subtotal, totalProfit]);
+  const totalProfit = useMemo(() => subtotal - totalCost, [subtotal, totalCost]);
+  const profitMargin = useMemo(() => (subtotal > 0 ? (totalProfit / subtotal) * 100 : 0), [subtotal, totalProfit]);
 
   async function loadData() {
     setLoading(true);
@@ -236,9 +230,7 @@ export default function NewInvoicePage() {
       settingsRes.error ? `Settings: ${settingsRes.error.message}` : "",
     ].filter(Boolean);
 
-    if (errors.length > 0) {
-      setMessage(errors.join(" | "));
-    }
+    if (errors.length > 0) setMessage(errors.join(" | "));
 
     if (jobRes.error) {
       setLoading(false);
@@ -250,13 +242,8 @@ export default function NewInvoicePage() {
     setServices((serviceRes.data || []) as ServiceItem[]);
     setParts((partsRes.data || []) as PartItem[]);
 
-    if (settingsRes.data?.default_labour_rate) {
-      setLabourRate(Number(settingsRes.data.default_labour_rate));
-    }
-
-    if (settingsRes.data?.gst_rate) {
-      setGstRate(Number(settingsRes.data.gst_rate));
-    }
+    if (settingsRes.data?.default_labour_rate) setLabourRate(Number(settingsRes.data.default_labour_rate));
+    if (settingsRes.data?.gst_rate) setGstRate(Number(settingsRes.data.gst_rate));
 
     setNotes(
       jobRes.data?.next_service_odometer || jobRes.data?.next_service_due_date
@@ -275,14 +262,21 @@ export default function NewInvoicePage() {
     loadData();
   }, [jobId]);
 
+  function handlePaymentMethodChange(value: string) {
+    setPaymentMethod(value);
+
+    if (value === "eftpos" || value === "bank_transfer") {
+      setGstEnabled(true);
+      return;
+    }
+
+    if (value === "cash") {
+      setGstEnabled(false);
+    }
+  }
+
   function addLine(item: Omit<InvoiceLine, "id">) {
-    setLines((prev) => [
-      ...prev,
-      {
-        ...item,
-        id: makeId(),
-      },
-    ]);
+    setLines((prev) => [...prev, { ...item, id: makeId() }]);
   }
 
   function updateLine(id: string, field: keyof InvoiceLine, value: string | number | boolean) {
@@ -309,60 +303,44 @@ export default function NewInvoicePage() {
     setLines((prev) => prev.filter((line) => line.id !== id));
   }
 
+  function createBaseLine(item: Partial<InvoiceLine>): Omit<InvoiceLine, "id"> {
+    return {
+      item_type: item.item_type || "custom",
+      description: item.description || "Custom charge",
+      quantity: item.quantity ?? 1,
+      unit_price: item.unit_price ?? 0,
+      tax_rate: finalGstEnabled ? gstRate : 0,
+      included_in_package: false,
+      visibility: "customer",
+      billing_mode: "billable",
+      cost_affects_profit: true,
+      included_note: null,
+      part_id: null,
+      cost_price: 0,
+      supplier: null,
+      current_stock: null,
+      ...item,
+    };
+  }
+
   function addPackage(packageId: string) {
     if (!packageId) return;
-
     const selected = packages.find((item) => item.id === packageId);
-
     if (!selected) {
       setMessage("Package not found.");
       return;
     }
 
-    addLine({
-      item_type: "package",
-      description: selected.name,
-      quantity: 1,
-      unit_price: Number(selected.base_price || 0),
-      tax_rate: gstRate,
-      included_in_package: false,
-      visibility: "customer",
-      billing_mode: "billable",
-      cost_affects_profit: true,
-      included_note: null,
-      part_id: null,
-      cost_price: 0,
-      supplier: null,
-      current_stock: null,
-    });
-
+    addLine(createBaseLine({ item_type: "package", description: selected.name, unit_price: Number(selected.base_price || 0) }));
     setMessage(`Package added: ${selected.name}`);
   }
 
   function addService(serviceId: string) {
     if (!serviceId) return;
-
     const selected = services.find((item) => item.id === serviceId);
     if (!selected) return;
-
-    addLine({
-      item_type: "service",
-      description: selected.name,
-      quantity: 1,
-      unit_price: Number(selected.default_price || 0),
-      tax_rate: gstRate,
-      included_in_package: false,
-      visibility: "customer",
-      billing_mode: "billable",
-      cost_affects_profit: true,
-      included_note: null,
-      part_id: null,
-      cost_price: 0,
-      supplier: null,
-      current_stock: null,
-    });
+    addLine(createBaseLine({ item_type: "service", description: selected.name, unit_price: Number(selected.default_price || 0) }));
   }
-
 
   function defaultBillingModeForPart(part: PartItem) {
     const text = `${part.part_name || ""} ${part.category || ""} ${part.item_type || ""}`.toLowerCase();
@@ -426,90 +404,38 @@ export default function NewInvoicePage() {
       included_note: null,
     };
   }
+
   function addPart(part: PartItem) {
     const costPrice = Number(part.average_cost || part.cost_price || 0);
-
-    addLine({
-      item_type: "part",
-      description: `${part.part_name}${part.part_number ? ` (${part.part_number})` : ""}`,
-      quantity: 1,
-      unit_price: Number(part.selling_price || 0),
-      tax_rate: gstRate,
-      included_in_package: false,
-      visibility: "customer",
-      billing_mode: "billable",
-      cost_affects_profit: true,
-      included_note: null,
-      part_id: part.id,
-      cost_price: costPrice,
-      supplier: part.supplier || null,
-      current_stock: Number(part.quantity_in_stock || 0),
-    });
-
+    addLine(
+      createBaseLine({
+        item_type: "part",
+        description: `${part.part_name}${part.part_number ? ` (${part.part_number})` : ""}`,
+        unit_price: Number(part.selling_price || 0),
+        part_id: part.id,
+        cost_price: costPrice,
+        supplier: part.supplier || null,
+        current_stock: Number(part.quantity_in_stock || 0),
+      })
+    );
     setPartSearch("");
     setMessage(`Part added: ${part.part_name}`);
   }
 
   function addLabour(hours: number) {
-    addLine({
-      item_type: "labour",
-      description: "Labour charge",
-      quantity: hours,
-      unit_price: labourRate,
-      tax_rate: gstRate,
-      included_in_package: false,
-      visibility: "customer",
-      billing_mode: "billable",
-      cost_affects_profit: true,
-      included_note: null,
-      part_id: null,
-      cost_price: 0,
-      supplier: null,
-      current_stock: null,
-    });
+    addLine(createBaseLine({ item_type: "labour", description: "Labour charge", quantity: hours, unit_price: labourRate }));
   }
 
   function addManualPart() {
-    addLine({
-      item_type: "part",
-      description: "Manual part / item",
-      quantity: 1,
-      unit_price: 0,
-      tax_rate: gstRate,
-      included_in_package: false,
-      visibility: "customer",
-      billing_mode: "billable",
-      cost_affects_profit: true,
-      included_note: null,
-      part_id: null,
-      cost_price: 0,
-      supplier: null,
-      current_stock: null,
-    });
+    addLine(createBaseLine({ item_type: "part", description: "Manual part / item", unit_price: 0 }));
   }
 
   function addCustomCharge() {
-    addLine({
-      item_type: "custom",
-      description: "Custom charge",
-      quantity: 1,
-      unit_price: 0,
-      tax_rate: gstRate,
-      included_in_package: false,
-      visibility: "customer",
-      billing_mode: "billable",
-      cost_affects_profit: true,
-      included_note: null,
-      part_id: null,
-      cost_price: 0,
-      supplier: null,
-      current_stock: null,
-    });
+    addLine(createBaseLine({ item_type: "custom", description: "Custom charge", unit_price: 0 }));
   }
 
   async function saveInvoice() {
     if (!job) return;
-
     setSaving(true);
     setMessage("");
 
@@ -525,11 +451,7 @@ export default function NewInvoicePage() {
     });
 
     if (stockIssue) {
-      setMessage(
-        `Not enough stock for ${stockIssue.description}. Current stock: ${
-          stockIssue.current_stock || 0
-        }`
-      );
+      setMessage(`Not enough stock for ${stockIssue.description}. Current stock: ${stockIssue.current_stock || 0}`);
       setSaving(false);
       return;
     }
@@ -560,6 +482,10 @@ export default function NewInvoicePage() {
       return;
     }
 
+    const paymentNote = paymentStatus === "paid" ? `Payment method: ${paymentMethod.replaceAll("_", " ")}.` : "";
+    const gstNote = `GST ${finalGstEnabled ? "included" : "not charged"} for this invoice.`;
+    const cleanInternalNotes = [internalNotes.trim(), paymentNote, gstNote].filter(Boolean).join("\n");
+
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .insert({
@@ -576,7 +502,7 @@ export default function NewInvoicePage() {
         amount_paid: amountPaid,
         balance_due: balanceDue,
         notes: notes.trim() || null,
-        internal_notes: internalNotes.trim() || null,
+        internal_notes: cleanInternalNotes || null,
         owner_copy_code: `OC-${formatJobNumber(job.job_number)}-${Date.now()}`,
         total_cost: totalCost,
         total_profit: totalProfit,
@@ -593,13 +519,9 @@ export default function NewInvoicePage() {
 
     const itemPayload = lines.map((line, index) => {
       const lineSellingTotal = Number(line.quantity || 0) * Number(line.unit_price || 0);
-      const lineCostTotal =
-        line.item_type === "part"
-          ? Number(line.quantity || 0) * Number(line.cost_price || 0)
-          : 0;
+      const lineCostTotal = line.item_type === "part" ? Number(line.quantity || 0) * Number(line.cost_price || 0) : 0;
       const lineProfit = lineSellingTotal - lineCostTotal;
-      const lineMargin =
-        lineSellingTotal > 0 ? (lineProfit / lineSellingTotal) * 100 : 0;
+      const lineMargin = lineSellingTotal > 0 ? (lineProfit / lineSellingTotal) * 100 : 0;
 
       return {
         invoice_id: invoice.id,
@@ -607,7 +529,7 @@ export default function NewInvoicePage() {
         description: line.description,
         quantity: line.quantity,
         unit_price: line.unit_price,
-        tax_rate: line.tax_rate,
+        tax_rate: finalGstEnabled ? gstRate : 0,
         included_in_package: line.included_in_package,
         sort_order: index + 1,
         part_id: line.part_id,
@@ -629,9 +551,7 @@ export default function NewInvoicePage() {
       };
     });
 
-    const { error: itemsError } = await supabase
-      .from("invoice_items")
-      .insert(itemPayload);
+    const { error: itemsError } = await supabase.from("invoice_items").insert(itemPayload);
 
     if (itemsError) {
       setMessage(itemsError.message);
@@ -641,35 +561,26 @@ export default function NewInvoicePage() {
 
     for (const line of lines) {
       if (!line.part_id) continue;
-
       const oldQuantity = Number(line.current_stock || 0);
       const soldQuantity = Number(line.quantity || 0);
       const newQuantity = oldQuantity - soldQuantity;
 
-      const { error: stockError } = await supabase
-        .from("parts")
-        .update({
-          quantity_in_stock: newQuantity,
-        })
-        .eq("id", line.part_id);
-
+      const { error: stockError } = await supabase.from("parts").update({ quantity_in_stock: newQuantity }).eq("id", line.part_id);
       if (stockError) {
         setMessage(stockError.message);
         setSaving(false);
         return;
       }
 
-      const { error: movementError } = await supabase
-        .from("stock_movements")
-        .insert({
-          part_id: line.part_id,
-          invoice_id: invoice.id,
-          movement_type: "invoice_sale",
-          quantity: -soldQuantity,
-          old_quantity: oldQuantity,
-          new_quantity: newQuantity,
-          notes: `Customer invoice INV-${String(invoice.invoice_number).padStart(5, "0")} for ${job.customers?.full_name || "customer"}`,
-        });
+      const { error: movementError } = await supabase.from("stock_movements").insert({
+        part_id: line.part_id,
+        invoice_id: invoice.id,
+        movement_type: "invoice_sale",
+        quantity: -soldQuantity,
+        old_quantity: oldQuantity,
+        new_quantity: newQuantity,
+        notes: `Customer invoice INV-${String(invoice.invoice_number).padStart(5, "0")} for ${job.customers?.full_name || "customer"}`,
+      });
 
       if (movementError) {
         setMessage(movementError.message);
@@ -678,10 +589,7 @@ export default function NewInvoicePage() {
       }
     }
 
-    setMessage(
-      `Invoice saved successfully: INV-${String(invoice.invoice_number).padStart(5, "0")}. Stock and profit snapshot updated.`
-    );
-
+    setMessage(`Invoice saved successfully: INV-${String(invoice.invoice_number).padStart(5, "0")}. Stock and profit snapshot updated.`);
     setSaving(false);
     await loadData();
   }
@@ -689,9 +597,7 @@ export default function NewInvoicePage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-100 p-6">
-        <div className="mx-auto max-w-7xl rounded-2xl bg-white p-6 shadow-sm">
-          Loading invoice draft...
-        </div>
+        <div className="mx-auto max-w-7xl rounded-2xl bg-white p-6 shadow-sm">Loading invoice draft...</div>
       </main>
     );
   }
@@ -702,9 +608,7 @@ export default function NewInvoicePage() {
         <div className="mx-auto max-w-7xl rounded-2xl bg-white p-6 shadow-sm">
           <p className="font-semibold text-red-600">Job not found.</p>
           {message && <p className="mt-2 text-sm text-slate-600">{message}</p>}
-          <Link href="/jobs" className="mt-4 inline-block rounded-xl bg-slate-950 px-4 py-2 text-white">
-            Back to Jobs
-          </Link>
+          <Link href="/jobs" className="mt-4 inline-block rounded-xl bg-slate-950 px-4 py-2 text-white">Back to Jobs</Link>
         </div>
       </main>
     );
@@ -716,63 +620,32 @@ export default function NewInvoicePage() {
         <div className="mb-6 flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-red-600">TW AUTO TUNE</p>
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-              Create Invoice Draft
-            </h1>
-            <p className="mt-1 text-sm text-slate-600 sm:text-base">
-              Generate invoice from {formatJobNumber(job.job_number)} job card.
-            </p>
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Create Invoice Draft</h1>
+            <p className="mt-1 text-sm text-slate-600 sm:text-base">Generate invoice from {formatJobNumber(job.job_number)} job card.</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/jobs/${job.id}`}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Back to Job
-            </Link>
-
-            <Link
-              href="/jobs"
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Jobs
-            </Link>
+            <Link href={`/jobs/${job.id}`} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back to Job</Link>
+            <Link href="/jobs" className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Jobs</Link>
           </div>
         </div>
 
-        {message && (
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
-            {message}
-          </div>
-        )}
+        {message && <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">{message}</div>}
 
         <section className="grid gap-6 lg:grid-cols-3">
           <div className="rounded-2xl bg-slate-950 p-6 text-white shadow-sm">
             <p className="text-sm text-red-300">Job</p>
-            <h2 className="mt-2 text-2xl font-bold">
-              {formatJobNumber(job.job_number)}
-            </h2>
+            <h2 className="mt-2 text-2xl font-bold">{formatJobNumber(job.job_number)}</h2>
             <div className="mt-4 grid gap-2 text-sm">
               <p>Type: <span className="font-semibold capitalize">{job.job_type}</span></p>
               <p>Odometer: <span className="font-semibold">{job.odometer?.toLocaleString() || "-"} km</span></p>
-              <p>
-                Next service:{" "}
-                <span className="font-semibold">
-                  {job.next_service_odometer
-                    ? `${job.next_service_odometer.toLocaleString()} km`
-                    : "-"}
-                  {job.next_service_due_date ? ` / ${job.next_service_due_date}` : ""}
-                </span>
-              </p>
+              <p>Next service: <span className="font-semibold">{job.next_service_odometer ? `${job.next_service_odometer.toLocaleString()} km` : "-"}{job.next_service_due_date ? ` / ${job.next_service_due_date}` : ""}</span></p>
             </div>
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-red-600">Customer</p>
-            <h2 className="mt-2 text-xl font-bold text-slate-900">
-              {job.customers?.full_name || "-"}
-            </h2>
+            <h2 className="mt-2 text-xl font-bold text-slate-900">{job.customers?.full_name || "-"}</h2>
             <div className="mt-4 grid gap-2 text-sm text-slate-700">
               <p>Phone: {job.customers?.phone || "-"}</p>
               <p>Email: {job.customers?.email || "-"}</p>
@@ -782,13 +655,9 @@ export default function NewInvoicePage() {
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-red-600">Vehicle</p>
-            <h2 className="mt-2 text-xl font-bold uppercase text-slate-900">
-              {job.vehicles?.registration || "-"}
-            </h2>
+            <h2 className="mt-2 text-xl font-bold uppercase text-slate-900">{job.vehicles?.registration || "-"}</h2>
             <div className="mt-4 grid gap-2 text-sm text-slate-700">
-              <p>
-                Vehicle: {[job.vehicles?.make, job.vehicles?.model].filter(Boolean).join(" ") || "-"}
-              </p>
+              <p>Vehicle: {[job.vehicles?.make, job.vehicles?.model].filter(Boolean).join(" ") || "-"}</p>
               <p>Year: {job.vehicles?.year || "-"}</p>
             </div>
           </div>
@@ -801,85 +670,38 @@ export default function NewInvoicePage() {
 
             <div className="mt-5 grid gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-700">
-                  Add package
-                </label>
-                <select
-                  value=""
-                  onChange={(e) => addPackage(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-red-500"
-                >
-                  <option value="">
-                    {packages.length === 0 ? "No packages found" : "Select package"}
-                  </option>
-                  {packages.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} - {money(Number(item.base_price))}
-                    </option>
-                  ))}
+                <label className="text-sm font-medium text-slate-700">Add package</label>
+                <select value="" onChange={(e) => addPackage(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-red-500">
+                  <option value="">{packages.length === 0 ? "No packages found" : "Select package"}</option>
+                  {packages.map((item) => <option key={item.id} value={item.id}>{item.name} - {money(Number(item.base_price))}</option>)}
                 </select>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-slate-700">Add service</label>
-                <select
-                  value=""
-                  onChange={(e) => addService(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-red-500"
-                >
+                <select value="" onChange={(e) => addService(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-red-500">
                   <option value="">Select service</option>
-                  {services.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} - {money(Number(item.default_price || 0))}
-                    </option>
-                  ))}
+                  {services.map((item) => <option key={item.id} value={item.id}>{item.name} - {money(Number(item.default_price || 0))}</option>)}
                 </select>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <label className="text-sm font-bold text-slate-900">
-                  Search parts from database
-                </label>
-                <input
-                  value={partSearch}
-                  onChange={(e) => setPartSearch(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-red-500"
-                  placeholder="Type oil filter, brake pads, battery..."
-                />
+                <label className="text-sm font-bold text-slate-900">Search parts from database</label>
+                <input value={partSearch} onChange={(e) => setPartSearch(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-red-500" placeholder="Type oil filter, brake pads, battery..." />
 
                 <div className="mt-3 max-h-72 overflow-y-auto rounded-xl border border-slate-200 bg-white">
                   {filteredParts.length === 0 ? (
-                    <p className="p-4 text-sm text-slate-500">
-                      No matching parts found.
-                    </p>
+                    <p className="p-4 text-sm text-slate-500">No matching parts found.</p>
                   ) : (
                     filteredParts.map((part) => (
-                      <button
-                        key={part.id}
-                        type="button"
-                        onClick={() => addPart(part)}
-                        className="block w-full border-b border-slate-100 p-3 text-left hover:bg-red-50"
-                      >
+                      <button key={part.id} type="button" onClick={() => addPart(part)} className="block w-full border-b border-slate-100 p-3 text-left hover:bg-red-50">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-slate-900">
-                              {part.part_name}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {part.part_number || "No part number"} |{" "}
-                              {part.category || "Uncategorised"} | Stock:{" "}
-                              {part.quantity_in_stock ?? 0}
-                            </p>
-                            {isOwner && (
-                              <p className="mt-1 text-xs text-slate-500">
-                                Cost: {money(Number(part.average_cost || part.cost_price || 0))} | Supplier: {part.supplier || "-"}
-                              </p>
-                            )}
+                            <p className="font-semibold text-slate-900">{part.part_name}</p>
+                            <p className="text-xs text-slate-500">{part.part_number || "No part number"} | {part.category || "Uncategorised"} | Stock: {part.quantity_in_stock ?? 0}</p>
+                            {isOwner && <p className="mt-1 text-xs text-slate-500">Cost: {money(Number(part.average_cost || part.cost_price || 0))} | Supplier: {part.supplier || "-"}</p>}
                           </div>
-
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                            {money(Number(part.selling_price || 0))}
-                          </span>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{money(Number(part.selling_price || 0))}</span>
                         </div>
                       </button>
                     ))
@@ -890,32 +712,16 @@ export default function NewInvoicePage() {
               <div>
                 <p className="text-sm font-medium text-slate-700">Labour</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => addLabour(0.5)} className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">
-                    + 0.5 hr
-                  </button>
-                  <button type="button" onClick={() => addLabour(1)} className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">
-                    + 1 hr
-                  </button>
-                  <button type="button" onClick={() => addLabour(1.5)} className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">
-                    + 1.5 hr
-                  </button>
-                  <button type="button" onClick={() => addLabour(2)} className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">
-                    + 2 hr
-                  </button>
+                  {[0.5, 1, 1.5, 2].map((hours) => (
+                    <button key={hours} type="button" onClick={() => addLabour(hours)} className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">+ {hours} hr</button>
+                  ))}
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  Default labour rate: {money(labourRate)} per hour
-                </p>
+                <p className="mt-2 text-xs text-slate-500">Default labour rate: {money(labourRate)} per hour</p>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={addManualPart} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-red-600">
-                  Add Manual Part
-                </button>
-
-                <button type="button" onClick={addCustomCharge} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-red-600">
-                  Add Custom Charge
-                </button>
+                <button type="button" onClick={addManualPart} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-red-600">Add Manual Part</button>
+                <button type="button" onClick={addCustomCharge} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-red-600">Add Custom Charge</button>
               </div>
             </div>
           </div>
@@ -926,10 +732,7 @@ export default function NewInvoicePage() {
                 <p className="text-sm font-medium text-red-600">Draft Invoice</p>
                 <h2 className="mt-1 text-xl font-bold text-slate-900">Line Items</h2>
               </div>
-
-              <div className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                {lines.length} items
-              </div>
+              <div className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">{lines.length} items</div>
             </div>
 
             <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
@@ -946,53 +749,28 @@ export default function NewInvoicePage() {
                     <th className="px-4 py-3">Action</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {lines.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
-                        No invoice items yet.
-                      </td>
-                    </tr>
+                    <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-500">No invoice items yet.</td></tr>
                   ) : (
                     lines.map((line) => {
                       const lineTotal = line.quantity * line.unit_price;
-                      const lineCost =
-                        line.item_type === "part"
-                          ? line.quantity * line.cost_price
-                          : 0;
+                      const lineCost = line.item_type === "part" ? line.quantity * line.cost_price : 0;
                       const lineProfit = lineTotal - lineCost;
 
                       return (
                         <tr key={line.id} className="border-t border-slate-200">
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap items-center gap-2">
-                              <div className="font-semibold capitalize text-slate-700">
-                                {line.item_type}
-                              </div>
-
-                              <span
-                                className={`rounded-full px-3 py-1 text-xs font-bold ${billingBadgeClass(line.billing_mode || "billable")}`}
-                              >
-                                {billingBadgeLabel(line.billing_mode || "billable")}
-                              </span>
+                              <div className="font-semibold capitalize text-slate-700">{line.item_type}</div>
+                              <span className={`rounded-full px-3 py-1 text-xs font-bold ${billingBadgeClass(line.billing_mode || "billable")}`}>{billingBadgeLabel(line.billing_mode || "billable")}</span>
                             </div>
-
-                            <p className="mt-1 text-xs text-slate-500">
-                              {billingHelpText(line.billing_mode || "billable")}
-                            </p>
-
+                            <p className="mt-1 text-xs text-slate-500">{billingHelpText(line.billing_mode || "billable")}</p>
                             <select
                               value={line.billing_mode || "billable"}
                               onChange={(e) => {
                                 const mode = e.target.value;
-                                setLines((prev) =>
-                                  prev.map((current) =>
-                                    current.id === line.id
-                                      ? applyBillingModeToLine(current, mode)
-                                      : current
-                                  )
-                                );
+                                setLines((prev) => prev.map((current) => current.id === line.id ? applyBillingModeToLine(current, mode) : current));
                               }}
                               className="mt-2 w-52 rounded-lg border border-slate-300 px-3 py-2 text-xs"
                             >
@@ -1001,51 +779,13 @@ export default function NewInvoicePage() {
                               <option value="internal_cost_only">Internal owner-only cost</option>
                             </select>
                           </td>
-
-                          <td className="px-4 py-3">
-                            <input
-                              value={line.description}
-                              onChange={(e) => updateLine(line.id, "description", e.target.value)}
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                            />
-                          </td>
-
-                          <td className="px-4 py-3">
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={line.quantity}
-                              onChange={(e) => updateLine(line.id, "quantity", e.target.value)}
-                              className="w-24 rounded-lg border border-slate-300 px-3 py-2"
-                            />
-                          </td>
-
-                          <td className="px-4 py-3">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={line.unit_price}
-                              onChange={(e) => updateLine(line.id, "unit_price", e.target.value)}
-                              disabled={line.billing_mode === "included_in_package" || line.billing_mode === "internal_cost_only"}
-                              className="w-28 rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500"
-                            />
-                          </td>
-
-                          {isOwner && (<td className="px-4 py-3"><input type="number" step="0.01" value={line.cost_price} onChange={(e) => updateLine(line.id, "cost_price", e.target.value)} disabled={line.item_type !== "part"} className="w-28 rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100" /></td>)}
-
-                          {isOwner && (<td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">{money(lineProfit)}</td>)}
-
-                          {isOwner && (<td className="whitespace-nowrap px-4 py-3 text-slate-700">{line.part_id ? `${line.current_stock || 0} -> ${Number(line.current_stock || 0) - Number(line.quantity || 0)}` : "-"}</td>)}
-
-                          <td className="px-4 py-3">
-                            <button
-                              type="button"
-                              onClick={() => removeLine(line.id)}
-                              className="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-200"
-                            >
-                              Remove
-                            </button>
-                          </td>
+                          <td className="px-4 py-3"><input value={line.description} onChange={(e) => updateLine(line.id, "description", e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" /></td>
+                          <td className="px-4 py-3"><input type="number" step="0.1" value={line.quantity} onChange={(e) => updateLine(line.id, "quantity", e.target.value)} className="w-24 rounded-lg border border-slate-300 px-3 py-2" /></td>
+                          <td className="px-4 py-3"><input type="number" step="0.01" value={line.unit_price} onChange={(e) => updateLine(line.id, "unit_price", e.target.value)} disabled={line.billing_mode === "included_in_package" || line.billing_mode === "internal_cost_only"} className="w-28 rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" /></td>
+                          {isOwner && <td className="px-4 py-3"><input type="number" step="0.01" value={line.cost_price} onChange={(e) => updateLine(line.id, "cost_price", e.target.value)} disabled={line.item_type !== "part"} className="w-28 rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100" /></td>}
+                          {isOwner && <td className="whitespace-nowrap px-4 py-3 font-semibold text-green-700">{money(lineProfit)}</td>}
+                          {isOwner && <td className="whitespace-nowrap px-4 py-3 text-slate-700">{line.part_id ? `${line.current_stock || 0} -> ${Number(line.current_stock || 0) - Number(line.quantity || 0)}` : "-"}</td>}
+                          <td className="px-4 py-3"><button type="button" onClick={() => removeLine(line.id)} className="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-200">Remove</button></td>
                         </tr>
                       );
                     })
@@ -1058,22 +798,11 @@ export default function NewInvoicePage() {
               <div className="grid gap-4">
                 <div>
                   <label className="text-sm font-medium text-slate-700">Customer-visible notes</label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="mt-1 min-h-24 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-red-500"
-                    placeholder="Invoice notes..."
-                  />
+                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 min-h-24 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-red-500" placeholder="Invoice notes..." />
                 </div>
-
                 <div>
                   <label className="text-sm font-medium text-slate-700">Internal notes</label>
-                  <textarea
-                    value={internalNotes}
-                    onChange={(e) => setInternalNotes(e.target.value)}
-                    className="mt-1 min-h-20 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-red-500"
-                    placeholder="Private invoice notes..."
-                  />
+                  <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} className="mt-1 min-h-20 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-red-500" placeholder="Private invoice notes..." />
                 </div>
               </div>
 
@@ -1081,52 +810,50 @@ export default function NewInvoicePage() {
                 <p className="text-sm text-red-300">Invoice Summary</p>
 
                 <div className="mt-4 grid gap-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-300">Subtotal</span>
-                    <span className="font-semibold">{money(subtotal)}</span>
+                  <div className="flex justify-between"><span className="text-slate-300">Subtotal</span><span className="font-semibold">{money(subtotal)}</span></div>
+
+                  <div>
+                    <label className="text-sm text-slate-300">Payment method</label>
+                    <select value={paymentMethod} onChange={(e) => handlePaymentMethodChange(e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white">
+                      <option className="text-slate-900" value="bank_transfer">Bank Transfer - GST automatic</option>
+                      <option className="text-slate-900" value="eftpos">EFTPOS - GST automatic</option>
+                      <option className="text-slate-900" value="cash">Cash - GST optional</option>
+                    </select>
                   </div>
 
-                  <div className="flex justify-between">
-                    <span className="text-slate-300">GST {gstRate}%</span>
-                    <span className="font-semibold">{money(gstAmount)}</span>
-                  </div>                  {isOwner && (
-                    <>                  {isOwner && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-slate-300">Owner Cost</span>
-                        <span className="font-semibold">{money(totalCost)}</span>
+                  {paymentMethod === "cash" ? (
+                    <div className="rounded-xl border border-white/10 bg-white/10 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold">GST for cash invoice</p>
+                          <p className="text-xs text-slate-300">Cash payments can be saved with GST on or off.</p>
+                        </div>
+                        <button type="button" onClick={() => setGstEnabled((prev) => !prev)} className={`rounded-lg px-3 py-2 text-xs font-bold text-white ${gstEnabled ? "bg-green-600" : "bg-slate-600"}`}>
+                          {gstEnabled ? "GST ON" : "GST OFF"}
+                        </button>
                       </div>
-
-                      <div className="flex justify-between">
-                        <span className="text-slate-300">Profit</span>
-                        <span className="font-semibold text-green-300">{money(totalProfit)}</span>
-                      </div>
-
-                      <div className="flex justify-between">
-                        <span className="text-slate-300">Margin</span>
-                        <span className="font-semibold text-green-300">
-                          {profitMargin.toFixed(2)}%
-                        </span>
-                      </div>
-                    </>
-                  )}
-                    </>
-                  )}
-
-                  <div className="border-t border-white/10 pt-3">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total</span>
-                      <span>{money(total)}</span>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-xs text-green-200">
+                      GST is automatically ON for EFTPOS and bank transfer payments.
+                    </div>
+                  )}
+
+                  <div className="flex justify-between"><span className="text-slate-300">GST {finalGstEnabled ? `${gstRate}%` : "not charged"}</span><span className="font-semibold">{money(gstAmount)}</span></div>
+
+                  {isOwner && (
+                    <>
+                      <div className="flex justify-between"><span className="text-slate-300">Owner Cost</span><span className="font-semibold">{money(totalCost)}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-300">Profit</span><span className="font-semibold text-green-300">{money(totalProfit)}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-300">Margin</span><span className="font-semibold text-green-300">{profitMargin.toFixed(2)}%</span></div>
+                    </>
+                  )}
+
+                  <div className="border-t border-white/10 pt-3"><div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(total)}</span></div></div>
 
                   <div>
                     <label className="text-sm text-slate-300">Invoice status</label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white"
-                    >
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white">
                       <option className="text-slate-900" value="draft">Draft</option>
                       <option className="text-slate-900" value="sent">Sent</option>
                       <option className="text-slate-900" value="paid">Paid</option>
@@ -1135,22 +862,13 @@ export default function NewInvoicePage() {
 
                   <div>
                     <label className="text-sm text-slate-300">Payment</label>
-                    <select
-                      value={paymentStatus}
-                      onChange={(e) => setPaymentStatus(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white"
-                    >
+                    <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white">
                       <option className="text-slate-900" value="unpaid">Unpaid</option>
                       <option className="text-slate-900" value="paid">Paid</option>
                     </select>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={saveInvoice}
-                    disabled={saving}
-                    className="mt-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-                  >
+                  <button type="button" onClick={saveInvoice} disabled={saving} className="mt-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
                     {saving ? "Saving..." : "Save Invoice Draft"}
                   </button>
                 </div>
@@ -1162,24 +880,3 @@ export default function NewInvoicePage() {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
