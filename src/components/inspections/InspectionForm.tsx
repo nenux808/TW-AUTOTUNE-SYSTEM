@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +12,21 @@ type Props = {
   jobs: Job[];
   checklistItems: InspectionChecklistItem[];
   onInspectionSaved: () => void;
+};
+
+type ExistingInspectionItem = {
+  id: string;
+  checklist_item_id: string | null;
+  category_name: string;
+  item_name: string;
+  status: string;
+  measurement_value: string | null;
+  measurement_unit: string | null;
+  mechanic_note: string | null;
+  recommendation: string | null;
+  repaired_during_job: boolean;
+  show_on_invoice: boolean;
+  quote_required: boolean;
 };
 
 const statuses = [
@@ -67,6 +82,22 @@ function categoryCounts(items: JobInspectionItemInput[]) {
   };
 }
 
+function buildBlankChecklistItems(checklistItems: InspectionChecklistItem[]) {
+  return checklistItems.map((item) => ({
+    checklist_item_id: item.id,
+    category_name: item.inspection_categories?.name || "General",
+    item_name: item.item_name,
+    status: "not_checked",
+    measurement_value: "",
+    measurement_unit: item.measurement_unit || "",
+    mechanic_note: "",
+    recommendation: "",
+    repaired_during_job: false,
+    show_on_invoice: item.default_customer_visible,
+    quote_required: false,
+  }));
+}
+
 export default function InspectionForm({
   jobs,
   checklistItems,
@@ -75,6 +106,7 @@ export default function InspectionForm({
   const supabase = createClient();
 
   const [selectedJobId, setSelectedJobId] = useState("");
+  const [existingInspectionId, setExistingInspectionId] = useState<string | null>(null);
   const [items, setItems] = useState<JobInspectionItemInput[]>([]);
   const [activeCategory, setActiveCategory] = useState("");
   const [overallStatus, setOverallStatus] = useState("not_checked");
@@ -100,12 +132,15 @@ export default function InspectionForm({
   }, [items]);
 
   const categories = Object.keys(groupedItems);
-
   const activeItems = activeCategory ? groupedItems[activeCategory] || [] : [];
 
-  function loadChecklistForJob(jobId: string) {
+  async function loadChecklistForJob(jobId: string) {
     setSelectedJobId(jobId);
+    setExistingInspectionId(null);
     setMessage("");
+    setOverallStatus("not_checked");
+    setCustomerVisibleNotes("");
+    setInternalNotes("");
 
     if (!jobId) {
       setItems([]);
@@ -113,24 +148,86 @@ export default function InspectionForm({
       return;
     }
 
-    const preparedItems = checklistItems.map((item) => ({
-      checklist_item_id: item.id,
-      category_name: item.inspection_categories?.name || "General",
-      item_name: item.item_name,
-      status: "not_checked",
-      measurement_value: "",
-      measurement_unit: item.measurement_unit || "",
-      mechanic_note: "",
-      recommendation: "",
-      repaired_during_job: false,
-      show_on_invoice: item.default_customer_visible,
-      quote_required: false,
-    }));
+    setLoading(true);
 
-    setItems(preparedItems);
+    const preparedItems = buildBlankChecklistItems(checklistItems);
 
-    const firstCategory = preparedItems[0]?.category_name || "";
-    setActiveCategory(firstCategory);
+    const { data: existingInspection, error: inspectionError } = await supabase
+      .from("job_inspections")
+      .select("id, overall_status, customer_visible_notes, internal_notes, completed_at, created_at")
+      .eq("job_id", jobId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (inspectionError) {
+      setItems(preparedItems);
+      setActiveCategory(preparedItems[0]?.category_name || "");
+      setMessage(`Could not load saved inspection. Starting new checklist. ${inspectionError.message}`);
+      setLoading(false);
+      return;
+    }
+
+    if (!existingInspection) {
+      setItems(preparedItems);
+      setActiveCategory(preparedItems[0]?.category_name || "");
+      setMessage("No saved inspection found for this job. Starting a new checklist.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: savedItems, error: itemError } = await supabase
+      .from("job_inspection_items")
+      .select("id, checklist_item_id, category_name, item_name, status, measurement_value, measurement_unit, mechanic_note, recommendation, repaired_during_job, show_on_invoice, quote_required")
+      .eq("inspection_id", existingInspection.id);
+
+    if (itemError) {
+      setItems(preparedItems);
+      setActiveCategory(preparedItems[0]?.category_name || "");
+      setMessage(`Saved inspection found, but checklist items could not be loaded. ${itemError.message}`);
+      setLoading(false);
+      return;
+    }
+
+    const savedItemsByChecklistId = new Map<string, ExistingInspectionItem>();
+    const savedItemsByName = new Map<string, ExistingInspectionItem>();
+
+    (savedItems || []).forEach((item: ExistingInspectionItem) => {
+      if (item.checklist_item_id) {
+        savedItemsByChecklistId.set(item.checklist_item_id, item);
+      }
+
+      savedItemsByName.set(`${item.category_name}::${item.item_name}`, item);
+    });
+
+    const mergedItems = preparedItems.map((item) => {
+      const savedItem =
+        savedItemsByChecklistId.get(item.checklist_item_id) ||
+        savedItemsByName.get(`${item.category_name}::${item.item_name}`);
+
+      if (!savedItem) return item;
+
+      return {
+        ...item,
+        status: savedItem.status || "not_checked",
+        measurement_value: savedItem.measurement_value || "",
+        measurement_unit: savedItem.measurement_unit || item.measurement_unit || "",
+        mechanic_note: savedItem.mechanic_note || "",
+        recommendation: savedItem.recommendation || "",
+        repaired_during_job: savedItem.repaired_during_job || false,
+        show_on_invoice: savedItem.show_on_invoice,
+        quote_required: savedItem.quote_required || false,
+      };
+    });
+
+    setExistingInspectionId(existingInspection.id);
+    setOverallStatus(existingInspection.overall_status || "not_checked");
+    setCustomerVisibleNotes(existingInspection.customer_visible_notes || "");
+    setInternalNotes(existingInspection.internal_notes || "");
+    setItems(mergedItems);
+    setActiveCategory(mergedItems[0]?.category_name || "");
+    setMessage("Saved inspection loaded. You are editing the existing checklist for this job.");
+    setLoading(false);
   }
 
   function updateItem(
@@ -194,24 +291,44 @@ export default function InspectionForm({
       return;
     }
 
-    const { data: inspection, error: inspectionError } = await supabase
-      .from("job_inspections")
-      .insert({
-        job_id: selectedJob.id,
-        vehicle_id: selectedJob.vehicle_id,
-        overall_status: overallStatus,
-        odometer: selectedJob.odometer,
-        customer_visible_notes: customerVisibleNotes.trim() || null,
-        internal_notes: internalNotes.trim() || null,
-        completed_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
+    const inspectionPayload = {
+      job_id: selectedJob.id,
+      vehicle_id: selectedJob.vehicle_id,
+      overall_status: overallStatus,
+      odometer: selectedJob.odometer,
+      customer_visible_notes: customerVisibleNotes.trim() || null,
+      internal_notes: internalNotes.trim() || null,
+      completed_at: new Date().toISOString(),
+    };
 
-    if (inspectionError || !inspection) {
-      setMessage(inspectionError?.message || "Could not create inspection.");
-      setLoading(false);
-      return;
+    let inspectionId = existingInspectionId;
+
+    if (inspectionId) {
+      const { error: updateError } = await supabase
+        .from("job_inspections")
+        .update(inspectionPayload)
+        .eq("id", inspectionId);
+
+      if (updateError) {
+        setMessage(updateError.message);
+        setLoading(false);
+        return;
+      }
+    } else {
+      const { data: inspection, error: inspectionError } = await supabase
+        .from("job_inspections")
+        .insert(inspectionPayload)
+        .select("id")
+        .single();
+
+      if (inspectionError || !inspection) {
+        setMessage(inspectionError?.message || "Could not create inspection.");
+        setLoading(false);
+        return;
+      }
+
+      inspectionId = inspection.id;
+      setExistingInspectionId(inspection.id);
     }
 
     const checkedItems = items.filter(
@@ -219,12 +336,25 @@ export default function InspectionForm({
         item.status !== "not_checked" ||
         item.measurement_value ||
         item.mechanic_note ||
-        item.recommendation
+        item.recommendation ||
+        item.quote_required ||
+        item.repaired_during_job
     );
+
+    const { error: deleteItemsError } = await supabase
+      .from("job_inspection_items")
+      .delete()
+      .eq("inspection_id", inspectionId);
+
+    if (deleteItemsError) {
+      setMessage(deleteItemsError.message);
+      setLoading(false);
+      return;
+    }
 
     if (checkedItems.length > 0) {
       const payload = checkedItems.map((item) => ({
-        inspection_id: inspection.id,
+        inspection_id: inspectionId,
         checklist_item_id: item.checklist_item_id,
         category_name: item.category_name,
         item_name: item.item_name,
@@ -249,13 +379,7 @@ export default function InspectionForm({
       }
     }
 
-    setMessage("Inspection saved successfully.");
-    setSelectedJobId("");
-    setItems([]);
-    setActiveCategory("");
-    setOverallStatus("not_checked");
-    setCustomerVisibleNotes("");
-    setInternalNotes("");
+    setMessage(existingInspectionId ? "Inspection updated successfully." : "Inspection saved successfully.");
     onInspectionSaved();
     setLoading(false);
   }
@@ -310,20 +434,34 @@ export default function InspectionForm({
 
       {selectedJob && (
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          <p className="font-semibold text-slate-900">
-            {formatJobNumber(selectedJob.job_number)} -{" "}
-            {selectedJob.customers?.full_name}
-          </p>
-          <p>
-            Vehicle:{" "}
-            <span className="font-semibold uppercase">
-              {selectedJob.vehicles?.registration}
-            </span>{" "}
-            {[selectedJob.vehicles?.make, selectedJob.vehicles?.model]
-              .filter(Boolean)
-              .join(" ")}
-          </p>
-          <p>Odometer: {selectedJob.odometer?.toLocaleString() || "-"} km</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-slate-900">
+                {formatJobNumber(selectedJob.job_number)} -{" "}
+                {selectedJob.customers?.full_name}
+              </p>
+              <p>
+                Vehicle:{" "}
+                <span className="font-semibold uppercase">
+                  {selectedJob.vehicles?.registration}
+                </span>{" "}
+                {[selectedJob.vehicles?.make, selectedJob.vehicles?.model]
+                  .filter(Boolean)
+                  .join(" ")}
+              </p>
+              <p>Odometer: {selectedJob.odometer?.toLocaleString() || "-"} km</p>
+            </div>
+
+            <span
+              className={
+                existingInspectionId
+                  ? "rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700"
+                  : "rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700"
+              }
+            >
+              {existingInspectionId ? "Editing saved inspection" : "New inspection"}
+            </span>
+          </div>
         </div>
       )}
 
@@ -409,9 +547,7 @@ export default function InspectionForm({
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setWholeCategoryStatus(activeCategory, "not_checked")
-                    }
+                    onClick={() => setWholeCategoryStatus(activeCategory, "not_checked")}
                     className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
                   >
                     Reset Category
@@ -607,7 +743,7 @@ export default function InspectionForm({
           disabled={loading}
           className="mt-6 rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-60"
         >
-          {loading ? "Saving..." : "Save Inspection"}
+          {loading ? "Saving..." : existingInspectionId ? "Update Inspection" : "Save Inspection"}
         </button>
       )}
     </div>
