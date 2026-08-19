@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AuthGuard from "@/components/auth/AuthGuard";
 import "./globals.css";
@@ -18,7 +18,8 @@ export const metadata: Metadata = {
     default: "TW AUTO TUNE Management System",
     template: "%s | TW AUTO TUNE",
   },
-  description: "TW AUTO TUNE workshop management, invoices, jobs, vehicles and inventory system.",
+  description:
+    "TW AUTO TUNE workshop management, invoices, jobs, vehicles and inventory system.",
   icons: {
     icon: "/favicon.ico",
   },
@@ -34,14 +35,16 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body suppressHydrationWarning className="min-h-full flex flex-col"><AuthGuard>{children}</AuthGuard></body>
+      <body suppressHydrationWarning className="min-h-full bg-slate-100">
+        <AuthGuard>{children}</AuthGuard>
+
+        <footer className="no-print border-t border-slate-200 bg-white/80 px-4 py-3 text-center text-[11px] text-slate-400">
+          System developed by{" "}
+          <span className="font-semibold text-slate-500">
+            Nenux Web Solutions
+          </span>
+        </footer>
+      </body>
     </html>
   );
 }
-
-
-
-
-
-
-
