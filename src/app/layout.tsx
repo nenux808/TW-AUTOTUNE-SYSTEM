@@ -40,9 +40,14 @@ export default function RootLayout({
 
         <footer className="no-print border-t border-slate-200 bg-white/80 px-4 py-3 text-center text-[11px] text-slate-400">
           System developed by{" "}
-          <span className="font-semibold text-slate-500">
+          <a
+            href="https://nenux.com.au"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-slate-500 transition hover:text-red-600 hover:underline"
+          >
             Nenux Web Solutions
-          </span>
+          </a>
         </footer>
       </body>
     </html>
