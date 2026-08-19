@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -383,6 +383,13 @@ export default function InvoicesPage() {
                             className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-red-600"
                           >
                             View
+                          </Link>
+
+                          <Link
+                            href={`/invoices/${invoice.id}/edit`}
+                            className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-200"
+                          >
+                            Edit
                           </Link>
 
                           <Link
