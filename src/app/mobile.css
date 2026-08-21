@@ -195,21 +195,6 @@ button {
     grid-template-columns: 1fr !important;
   }
 
-  .min-w-\[700px\],
-  .min-w-\[750px\],
-  .min-w-\[800px\],
-  .min-w-\[850px\],
-  .min-w-\[900px\],
-  .min-w-\[950px\],
-  .min-w-\[1000px\],
-  .min-w-\[1050px\],
-  .min-w-\[1100px\],
-  .min-w-\[1150px\],
-  .min-w-\[1200px\],
-  .min-w-\[1250px\] {
-    min-width: 760px !important;
-  }
-
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
@@ -228,7 +213,7 @@ button {
   }
 
   table {
-    font-size: 0.82rem !important;
+    font-size: 0.88rem !important;
   }
 
   th,
@@ -321,20 +306,116 @@ button {
   .truncate {
     white-space: normal !important;
   }
+}
 
-  .min-w-\[700px\],
-  .min-w-\[750px\],
-  .min-w-\[800px\],
-  .min-w-\[850px\],
-  .min-w-\[900px\],
-  .min-w-\[950px\],
-  .min-w-\[1000px\],
-  .min-w-\[1050px\],
-  .min-w-\[1100px\],
-  .min-w-\[1150px\],
-  .min-w-\[1200px\],
-  .min-w-\[1250px\] {
-    min-width: 680px !important;
+/* Stronger phone layout for public/customer invoice pages and other read-only tables. */
+@media (max-width: 640px) {
+  main h1 {
+    font-size: 1.45rem !important;
+  }
+
+  main p,
+  main span,
+  main div,
+  main td,
+  main th {
+    line-height: 1.45;
+  }
+
+  .overflow-x-auto {
+    overflow-x: visible !important;
+  }
+
+  .overflow-x-auto::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .overflow-x-auto table,
+  table.min-w-\[700px\],
+  table.min-w-\[750px\],
+  table.min-w-\[800px\],
+  table.min-w-\[850px\],
+  table.min-w-\[900px\],
+  table.min-w-\[950px\],
+  table.min-w-\[1000px\],
+  table.min-w-\[1050px\],
+  table.min-w-\[1100px\],
+  table.min-w-\[1150px\],
+  table.min-w-\[1200px\],
+  table.min-w-\[1250px\] {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .overflow-x-auto thead {
+    display: none !important;
+  }
+
+  .overflow-x-auto table,
+  .overflow-x-auto tbody,
+  .overflow-x-auto tr,
+  .overflow-x-auto td {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .overflow-x-auto tr {
+    margin: 0.75rem 0 !important;
+    overflow: hidden;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 0.9rem !important;
+    background: #ffffff !important;
+  }
+
+  .overflow-x-auto td {
+    display: flex !important;
+    justify-content: space-between;
+    gap: 0.9rem;
+    border-top: 1px solid #f1f5f9 !important;
+    border-bottom: 0 !important;
+    padding: 0.75rem 0.9rem !important;
+    color: #0f172a !important;
+    font-size: 0.9rem !important;
+  }
+
+  .overflow-x-auto td:first-child {
+    border-top: 0 !important;
+    background: #020617 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+  }
+
+  .overflow-x-auto td::before {
+    flex: 0 0 38%;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .overflow-x-auto td:first-child::before {
+    color: #cbd5e1;
+  }
+
+  .overflow-x-auto td:nth-child(1)::before { content: "Type"; }
+  .overflow-x-auto td:nth-child(2)::before { content: "Description"; }
+  .overflow-x-auto td:nth-child(3)::before { content: "Qty / Status"; }
+  .overflow-x-auto td:nth-child(4)::before { content: "Price / Method"; }
+  .overflow-x-auto td:nth-child(5)::before { content: "Total / Date"; }
+  .overflow-x-auto td:nth-child(6)::before { content: "Status"; }
+  .overflow-x-auto td:nth-child(7)::before { content: "Total"; }
+  .overflow-x-auto td:nth-child(8)::before { content: "Paid"; }
+  .overflow-x-auto td:nth-child(9)::before { content: "Balance"; }
+  .overflow-x-auto td:nth-child(10)::before { content: "Action"; }
+
+  .overflow-x-auto td > * {
+    min-width: 0;
+  }
+
+  .overflow-x-auto td {
+    word-break: break-word;
   }
 }
 
