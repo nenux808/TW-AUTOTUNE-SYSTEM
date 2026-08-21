@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -23,11 +23,7 @@ function isOwnerInvoicePath(pathname: string) {
 }
 
 function isPublicRoute(pathname: string) {
-  return (
-    pathname === "/login" ||
-    pathname.startsWith("/invoice-view") ||
-    pathname.startsWith("/api")
-  );
+  return pathname === "/login" || pathname.startsWith("/invoice-view");
 }
 
 function canAccessPath(role: UserRole | null, pathname: string) {
