@@ -1,6 +1,6 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireApiUser } from "@/lib/auth/server";
 import {
   appUrl,
   formatInvoiceNumber,
@@ -11,6 +11,13 @@ import {
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireApiUser(["owner", "mechanic", "front_desk"]);
+
+    if (auth.response) {
+      return auth.response;
+    }
+
+    const supabase = auth.supabase;
     const { invoiceId } = await request.json();
 
     if (!invoiceId) {
@@ -19,8 +26,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const supabase = await createServerSupabaseClient();
 
     const { data: invoice, error } = await supabase
       .from("invoices")
@@ -86,7 +91,6 @@ export async function POST(request: Request) {
     }
 
     const invoiceLink = `${appUrl().replace(/\/$/, "")}/invoice-view/${publicToken}`;
-
     const subject = `${invoiceNumber} - TW AUTO TUNE Invoice`;
 
     const html = `
