@@ -1,0 +1,55 @@
+/* Mobile fixes for card-style links.
+   Keeps tap targets big without forcing dashboard cards into one-line flex rows. */
+
+@media (max-width: 768px) {
+  a.rounded-xl.border.border-slate-200.p-4,
+  a.rounded-xl.border.border-slate-300.p-4,
+  a.rounded-2xl.border.border-slate-200.p-4,
+  a.rounded-2xl.border.border-slate-300.p-4 {
+    display: block !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    text-align: left !important;
+    align-items: initial !important;
+    justify-content: initial !important;
+    padding: 1rem !important;
+  }
+
+  a.rounded-xl.border.border-slate-200.p-4 > p,
+  a.rounded-xl.border.border-slate-300.p-4 > p,
+  a.rounded-2xl.border.border-slate-200.p-4 > p,
+  a.rounded-2xl.border.border-slate-300.p-4 > p {
+    display: block !important;
+    width: 100% !important;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  a.rounded-xl.border.border-slate-200.p-4 > p:first-child,
+  a.rounded-xl.border.border-slate-300.p-4 > p:first-child,
+  a.rounded-2xl.border.border-slate-200.p-4 > p:first-child,
+  a.rounded-2xl.border.border-slate-300.p-4 > p:first-child {
+    margin-bottom: 0.35rem !important;
+    font-size: 1rem !important;
+    line-height: 1.25 !important;
+  }
+
+  a.rounded-xl.border.border-slate-200.p-4 > p + p,
+  a.rounded-xl.border.border-slate-300.p-4 > p + p,
+  a.rounded-2xl.border.border-slate-200.p-4 > p + p,
+  a.rounded-2xl.border.border-slate-300.p-4 > p + p {
+    margin-top: 0.25rem !important;
+    font-size: 0.9rem !important;
+    line-height: 1.45 !important;
+  }
+}
+
+@media (max-width: 520px) {
+  a.rounded-xl.border.border-slate-200.p-4,
+  a.rounded-xl.border.border-slate-300.p-4,
+  a.rounded-2xl.border.border-slate-200.p-4,
+  a.rounded-2xl.border.border-slate-300.p-4 {
+    padding: 1rem !important;
+  }
+}
