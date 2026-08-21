@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AuthGuard from "@/components/auth/AuthGuard";
+import { productBrand } from "@/lib/product/branding";
 import "./globals.css";
 import "./mobile.css";
 import "./card-mobile.css";
@@ -17,11 +18,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "TW AUTO TUNE Management System",
-    template: "%s | TW AUTO TUNE",
+    default: productBrand.name,
+    template: `%s | ${productBrand.name}`,
   },
-  description:
-    "TW AUTO TUNE workshop management, invoices, jobs, vehicles and inventory system.",
+  description: productBrand.description,
   icons: {
     icon: "/favicon.ico",
   },
@@ -41,14 +41,16 @@ export default function RootLayout({
         <AuthGuard>{children}</AuthGuard>
 
         <footer className="no-print border-t border-slate-200 bg-white/80 px-4 py-3 text-center text-[11px] text-slate-400">
-          System developed by{" "}
+          Powered by <span className="font-semibold text-slate-500">{productBrand.name}</span>
+          {" · "}
+          Developed by{" "}
           <a
-            href="https://nenux.com.au"
+            href={productBrand.companyUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-slate-500 transition hover:text-red-600 hover:underline"
           >
-            Nenux Web Solutions
+            {productBrand.companyName}
           </a>
         </footer>
       </body>
