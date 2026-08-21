@@ -1,0 +1,355 @@
+/* Global mobile responsiveness pass for TW AUTO TUNE.
+   This file improves usability across phones/tablets without changing page logic. */
+
+:root {
+  --mobile-safe-x: max(1rem, env(safe-area-inset-left));
+  --mobile-safe-right: max(1rem, env(safe-area-inset-right));
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+button,
+a,
+select,
+input,
+textarea {
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea,
+button {
+  font-size: 16px;
+}
+
+@media (max-width: 1024px) {
+  main {
+    width: 100%;
+  }
+
+  main > div,
+  .mx-auto {
+    max-width: 100% !important;
+  }
+
+  .xl\:grid-cols-\[420px_minmax\(0\,1fr\)\],
+  .xl\:grid-cols-\[360px_minmax\(0\,1fr\)\],
+  .xl\:grid-cols-\[320px_1fr\],
+  .lg\:grid-cols-\[1fr_340px\],
+  .lg\:grid-cols-\[minmax\(0\,1fr\)_360px\],
+  .lg\:grid-cols-\[minmax\(0\,1fr\)_340px\],
+  .md\:grid-cols-3,
+  .md\:grid-cols-2,
+  .lg\:grid-cols-3,
+  .xl\:grid-cols-5 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  main {
+    padding-left: var(--mobile-safe-x) !important;
+    padding-right: var(--mobile-safe-right) !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+
+  h1 {
+    font-size: 1.6rem !important;
+    line-height: 1.15 !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+    line-height: 1.2 !important;
+  }
+
+  h3 {
+    font-size: 1.05rem !important;
+    line-height: 1.25 !important;
+  }
+
+  p,
+  td,
+  th,
+  label,
+  input,
+  select,
+  textarea,
+  button,
+  a {
+    overflow-wrap: anywhere;
+  }
+
+  .rounded-2xl {
+    border-radius: 1rem !important;
+  }
+
+  .p-8,
+  .p-7,
+  .p-6,
+  .p-5 {
+    padding: 1rem !important;
+  }
+
+  .px-8,
+  .px-7,
+  .px-6,
+  .px-5 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .py-8,
+  .py-7,
+  .py-6,
+  .py-5 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .gap-8,
+  .gap-7,
+  .gap-6,
+  .gap-5 {
+    gap: 1rem !important;
+  }
+
+  .mb-8,
+  .mb-7,
+  .mb-6 {
+    margin-bottom: 1rem !important;
+  }
+
+  .mt-8,
+  .mt-7,
+  .mt-6 {
+    margin-top: 1rem !important;
+  }
+
+  .flex,
+  .sm\:flex-row,
+  .lg\:flex-row {
+    min-width: 0;
+  }
+
+  .sm\:flex-row,
+  .lg\:flex-row,
+  .md\:flex-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .sm\:items-center,
+  .lg\:items-center,
+  .md\:items-center {
+    align-items: stretch !important;
+  }
+
+  .sm\:justify-between,
+  .lg\:justify-between,
+  .md\:justify-between {
+    justify-content: flex-start !important;
+  }
+
+  a.rounded-xl,
+  button.rounded-xl,
+  a.rounded-lg,
+  button.rounded-lg {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100% !important;
+    min-height: 44px;
+  }
+
+  textarea {
+    min-height: 96px;
+  }
+
+  .grid {
+    min-width: 0;
+  }
+
+  .grid[class*="grid-cols-"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .min-w-\[700px\],
+  .min-w-\[750px\],
+  .min-w-\[800px\],
+  .min-w-\[850px\],
+  .min-w-\[900px\],
+  .min-w-\[950px\],
+  .min-w-\[1000px\],
+  .min-w-\[1050px\],
+  .min-w-\[1100px\],
+  .min-w-\[1150px\],
+  .min-w-\[1200px\],
+  .min-w-\[1250px\] {
+    min-width: 760px !important;
+  }
+
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    border-radius: 1rem;
+  }
+
+  .overflow-x-auto::before {
+    content: "Swipe table sideways";
+    display: block;
+    padding: 0.65rem 0.75rem;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  table {
+    font-size: 0.82rem !important;
+  }
+
+  th,
+  td {
+    padding: 0.65rem 0.75rem !important;
+    vertical-align: top;
+  }
+
+  .w-24,
+  .w-28,
+  .w-32,
+  .w-40,
+  .w-52,
+  .w-60,
+  .w-64,
+  .w-72,
+  .w-80,
+  .w-96 {
+    width: 100% !important;
+  }
+
+  .max-h-72,
+  .max-h-80,
+  .max-h-96 {
+    max-height: 50vh !important;
+  }
+
+  .text-3xl,
+  .sm\:text-3xl {
+    font-size: 1.65rem !important;
+  }
+
+  .text-2xl,
+  .sm\:text-2xl {
+    font-size: 1.35rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.1rem !important;
+  }
+
+  .text-sm {
+    font-size: 0.9rem !important;
+  }
+}
+
+@media (max-width: 520px) {
+  main {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .rounded-xl {
+    border-radius: 0.8rem !important;
+  }
+
+  .px-4,
+  .px-3 {
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
+  }
+
+  .py-4,
+  .py-3 {
+    padding-top: 0.8rem !important;
+    padding-bottom: 0.8rem !important;
+  }
+
+  .flex-wrap {
+    gap: 0.5rem !important;
+  }
+
+  .flex-wrap > a,
+  .flex-wrap > button {
+    flex: 1 1 100%;
+  }
+
+  .inline-block.rounded-xl,
+  .inline-flex.rounded-xl,
+  .rounded-xl.bg-red-600,
+  .rounded-xl.bg-slate-950,
+  .rounded-xl.border {
+    width: 100%;
+  }
+
+  .uppercase {
+    letter-spacing: 0.01em;
+  }
+
+  .truncate {
+    white-space: normal !important;
+  }
+
+  .min-w-\[700px\],
+  .min-w-\[750px\],
+  .min-w-\[800px\],
+  .min-w-\[850px\],
+  .min-w-\[900px\],
+  .min-w-\[950px\],
+  .min-w-\[1000px\],
+  .min-w-\[1050px\],
+  .min-w-\[1100px\],
+  .min-w-\[1150px\],
+  .min-w-\[1200px\],
+  .min-w-\[1250px\] {
+    min-width: 680px !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 20px;
+    min-height: 20px;
+  }
+}
