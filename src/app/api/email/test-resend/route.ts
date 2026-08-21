@@ -1,8 +1,22 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { requireApiOwner } from "@/lib/auth/server";
 import { fromEmail, resend } from "@/lib/email/resend";
 
 export async function GET() {
   try {
+    const auth = await requireApiOwner();
+
+    if (auth.response) {
+      return auth.response;
+    }
+
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { ok: false, error: "Test email endpoint is disabled in production." },
+        { status: 403 }
+      );
+    }
+
     const to = "admintwautotune@gmail.com";
 
     const result = await resend.emails.send({
@@ -18,14 +32,11 @@ export async function GET() {
       `,
     });
 
-    console.log("Direct Resend test result:", JSON.stringify(result, null, 2));
-
     if (result.error) {
       return NextResponse.json(
         {
           ok: false,
           error: result.error.message,
-          full: result,
         },
         { status: 500 }
       );
