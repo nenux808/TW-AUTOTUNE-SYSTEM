@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireApiOwner } from "@/lib/auth/server";
 import { fromEmail, resend } from "@/lib/email/resend";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+} from "@/lib/security/rate-limit";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const auth = await requireApiOwner();
 
@@ -14,6 +19,23 @@ export async function GET() {
       return NextResponse.json(
         { ok: false, error: "Test email endpoint is disabled in production." },
         { status: 403 }
+      );
+    }
+
+    const clientIp = getClientIp(request);
+    const actorId = auth.user?.id || clientIp;
+
+    const limit = await checkRateLimit({
+      namespace: "test-resend:owner",
+      key: actorId,
+      limit: 3,
+      windowMs: 60 * 60 * 1000,
+    });
+
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { ok: false, error: "Too many test email requests. Please wait and try again." },
+        { status: 429, headers: rateLimitHeaders(limit) }
       );
     }
 
