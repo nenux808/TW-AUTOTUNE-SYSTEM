@@ -8,6 +8,11 @@ import {
   fromEmail,
   resend,
 } from "@/lib/email/resend";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+} from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +29,37 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "invoiceId is required." },
         { status: 400 }
+      );
+    }
+
+    const clientIp = getClientIp(request);
+    const actorId = auth.user?.id || clientIp;
+
+    const userLimit = await checkRateLimit({
+      namespace: "send-invoice:user",
+      key: actorId,
+      limit: 5,
+      windowMs: 60 * 1000,
+    });
+
+    if (!userLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many invoice email requests. Please wait and try again." },
+        { status: 429, headers: rateLimitHeaders(userLimit) }
+      );
+    }
+
+    const invoiceLimit = await checkRateLimit({
+      namespace: "send-invoice:invoice",
+      key: String(invoiceId),
+      limit: 20,
+      windowMs: 60 * 60 * 1000,
+    });
+
+    if (!invoiceLimit.allowed) {
+      return NextResponse.json(
+        { error: "This invoice has been emailed too many times recently. Please wait and try again." },
+        { status: 429, headers: rateLimitHeaders(invoiceLimit) }
       );
     }
 
