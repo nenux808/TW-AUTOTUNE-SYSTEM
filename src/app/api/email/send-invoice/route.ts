@@ -14,6 +14,14 @@ import {
   rateLimitHeaders,
 } from "@/lib/security/rate-limit";
 
+const PUBLIC_INVOICE_EXPIRY_DAYS = 30;
+
+function publicInvoiceExpiryDate() {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + PUBLIC_INVOICE_EXPIRY_DAYS);
+  return expiresAt.toISOString();
+}
+
 export async function POST(request: Request) {
   try {
     const auth = await requireApiUser(["owner", "mechanic", "front_desk"]);
@@ -92,38 +100,26 @@ export async function POST(request: Request) {
     const invoiceNumber = formatInvoiceNumber(invoice.invoice_number);
 
     let publicToken = invoice.public_token;
+    const publicExpiresAt = publicInvoiceExpiryDate();
 
     if (!publicToken) {
       publicToken = randomUUID();
+    }
 
-      const { error: tokenError } = await supabase
-        .from("invoices")
-        .update({
-          public_token: publicToken,
-          public_enabled: true,
-        })
-        .eq("id", invoice.id);
+    const { error: tokenError } = await supabase
+      .from("invoices")
+      .update({
+        public_token: publicToken,
+        public_enabled: true,
+        public_expires_at: publicExpiresAt,
+      })
+      .eq("id", invoice.id);
 
-      if (tokenError) {
-        return NextResponse.json(
-          { error: tokenError.message },
-          { status: 500 }
-        );
-      }
-    } else if (!invoice.public_enabled) {
-      const { error: enableError } = await supabase
-        .from("invoices")
-        .update({
-          public_enabled: true,
-        })
-        .eq("id", invoice.id);
-
-      if (enableError) {
-        return NextResponse.json(
-          { error: enableError.message },
-          { status: 500 }
-        );
-      }
+    if (tokenError) {
+      return NextResponse.json(
+        { error: tokenError.message },
+        { status: 500 }
+      );
     }
 
     const invoiceLink = `${appUrl().replace(/\/$/, "")}/invoice-view/${publicToken}`;
@@ -167,6 +163,7 @@ export async function POST(request: Request) {
           </a>
         </p>
 
+        <p>This secure link expires in ${PUBLIC_INVOICE_EXPIRY_DAYS} days.</p>
         <p>Thank you for choosing TW AUTO TUNE.</p>
         <p style="font-size:12px;color:#6b7280;">System by Nenux Web Solutions</p>
       </div>
