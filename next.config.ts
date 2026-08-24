@@ -13,6 +13,21 @@ const contentSecurityPolicy = [
   "object-src 'none'",
 ].join("; ");
 
+const noStoreHeaders = [
+  {
+    key: "Cache-Control",
+    value: "no-store, no-cache, must-revalidate, private",
+  },
+  {
+    key: "Pragma",
+    value: "no-cache",
+  },
+  {
+    key: "Expires",
+    value: "0",
+  },
+];
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -38,6 +53,7 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=31536000; includeSubDomains; preload",
   },
+  ...noStoreHeaders,
 ];
 
 const nextConfig: NextConfig = {
