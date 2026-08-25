@@ -22,6 +22,17 @@ function publicInvoiceExpiryDate() {
   return expiresAt.toISOString();
 }
 
+function isMissingPublicExpiryColumn(error: any) {
+  const message = String(error?.message || error || "").toLowerCase();
+
+  return (
+    message.includes("public_expires_at") &&
+    (message.includes("schema cache") ||
+      message.includes("could not find") ||
+      message.includes("column"))
+  );
+}
+
 export async function POST(request: Request) {
   try {
     const auth = await requireApiUser(["owner", "mechanic", "front_desk"]);
@@ -106,7 +117,7 @@ export async function POST(request: Request) {
       publicToken = randomUUID();
     }
 
-    const { error: tokenError } = await supabase
+    const updateWithExpiry = await supabase
       .from("invoices")
       .update({
         public_token: publicToken,
@@ -115,11 +126,32 @@ export async function POST(request: Request) {
       })
       .eq("id", invoice.id);
 
-    if (tokenError) {
-      return NextResponse.json(
-        { error: tokenError.message },
-        { status: 500 }
-      );
+    if (updateWithExpiry.error) {
+      if (!isMissingPublicExpiryColumn(updateWithExpiry.error)) {
+        return NextResponse.json(
+          { error: updateWithExpiry.error.message },
+          { status: 500 }
+        );
+      }
+
+      // Emergency fallback: if Supabase/PostgREST schema cache has not picked up
+      // the new public_expires_at column yet, keep invoice emailing working and
+      // update only the existing public link fields. Run the SQL + schema reload
+      // to re-enable expiry enforcement.
+      const updateWithoutExpiry = await supabase
+        .from("invoices")
+        .update({
+          public_token: publicToken,
+          public_enabled: true,
+        })
+        .eq("id", invoice.id);
+
+      if (updateWithoutExpiry.error) {
+        return NextResponse.json(
+          { error: updateWithoutExpiry.error.message },
+          { status: 500 }
+        );
+      }
     }
 
     const invoiceLink = `${appUrl().replace(/\/$/, "")}/invoice-view/${publicToken}`;
