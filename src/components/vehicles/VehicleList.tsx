@@ -4,9 +4,10 @@ import type { Vehicle } from "@/types/vehicle";
 
 type Props = {
   vehicles: Vehicle[];
+  onEditVehicle?: (vehicle: Vehicle) => void;
 };
 
-export default function VehicleList({ vehicles }: Props) {
+export default function VehicleList({ vehicles, onEditVehicle }: Props) {
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between gap-4">
@@ -21,7 +22,7 @@ export default function VehicleList({ vehicles }: Props) {
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200">
-        <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[1000px] border-collapse text-left text-sm">
           <thead className="bg-slate-950 text-white">
             <tr>
               <th className="px-4 py-3">Registration</th>
@@ -31,13 +32,14 @@ export default function VehicleList({ vehicles }: Props) {
               <th className="px-4 py-3">Odometer</th>
               <th className="px-4 py-3">Fuel</th>
               <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Action</th>
             </tr>
           </thead>
 
           <tbody>
             {vehicles.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
                   No vehicles yet. Add a customer vehicle from the form.
                 </td>
               </tr>
@@ -67,6 +69,15 @@ export default function VehicleList({ vehicles }: Props) {
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase text-slate-700">
                       {vehicle.vehicle_type || "standard"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => onEditVehicle?.(vehicle)}
+                      className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    >
+                      Edit
+                    </button>
                   </td>
                 </tr>
               ))
