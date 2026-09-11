@@ -16,6 +16,7 @@ export default function VehiclesPage() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadData() {
@@ -36,6 +37,24 @@ export default function VehiclesPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  function handleEditVehicle(vehicle: Vehicle) {
+    setEditingVehicle(vehicle);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleVehicleAdded(vehicleId?: string, customerId?: string) {
+    loadData();
+
+    if (vehicleId && customerId) {
+      router.push(`/jobs?customer_id=${customerId}&vehicle_id=${vehicleId}`);
+    }
+  }
+
+  function handleVehicleSaved() {
+    setEditingVehicle(null);
+    loadData();
+  }
+
   return (
     <main className="min-h-screen bg-slate-100 p-6">
       <div className="mx-auto max-w-7xl">
@@ -44,7 +63,7 @@ export default function VehiclesPage() {
             <p className="text-sm font-medium text-red-600">TW AUTO TUNE</p>
             <h1 className="text-3xl font-bold text-slate-900">Vehicles</h1>
             <p className="mt-1 text-slate-600">
-              Add and manage customer vehicles for jobs, inspections and invoices.
+              Add, edit and manage customer vehicles for jobs, inspections and invoices.
             </p>
           </div>
 
@@ -60,24 +79,18 @@ export default function VehiclesPage() {
           <div className="rounded-2xl bg-white p-6 shadow-sm">Loading vehicles...</div>
         ) : (
           <div className="grid gap-6 xl:grid-cols-[460px_1fr]">
-            <VehicleForm customers={customers} initialCustomerId={preselectedCustomerId} onVehicleAdded={(vehicleId, customerId) => {
-            loadData();
-
-            if (vehicleId && customerId) {
-              router.push(`/jobs?customer_id=${customerId}&vehicle_id=${vehicleId}`);
-            }
-          }} />
-            <VehicleList vehicles={vehicles} />
+            <VehicleForm
+              customers={customers}
+              initialCustomerId={preselectedCustomerId}
+              editingVehicle={editingVehicle}
+              onCancelEdit={() => setEditingVehicle(null)}
+              onVehicleAdded={handleVehicleAdded}
+              onVehicleSaved={handleVehicleSaved}
+            />
+            <VehicleList vehicles={vehicles} onEditVehicle={handleEditVehicle} />
           </div>
         )}
       </div>
     </main>
   );
 }
-
-
-
-
-
-
-
