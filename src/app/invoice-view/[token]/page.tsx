@@ -64,7 +64,10 @@ function badgeClass(status?: string | null) {
   }
 }
 
-function UnavailableInvoice({ title = "Invoice not available", message = "This invoice link is invalid, expired, or no longer available. Please contact TW AUTO TUNE." }) {
+function UnavailableInvoice({
+  title = "Invoice not available",
+  message = "This invoice link is invalid, expired, or no longer available. Please contact TW AUTO TUNE.",
+}) {
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-10 text-slate-950">
       <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow-sm">
@@ -115,7 +118,7 @@ export default async function PublicInvoicePage({ params }: PageProps) {
 
   const supabase = createServiceRoleSupabaseClient();
 
-  const { data: invoice, error } = await supabase
+  const { data: rawInvoice, error } = await supabase
     .from("invoices")
     .select(`
       id,
@@ -163,9 +166,14 @@ export default async function PublicInvoicePage({ params }: PageProps) {
     .eq("public_enabled", true)
     .maybeSingle();
 
-  if (error || !invoice) {
+  if (error || !rawInvoice) {
     return <UnavailableInvoice />;
   }
+
+  const invoice: any = rawInvoice;
+  const job: any = Array.isArray(invoice.jobs) ? invoice.jobs[0] || null : invoice.jobs || null;
+  const customer: any = Array.isArray(invoice.customers) ? invoice.customers[0] || null : invoice.customers || null;
+  const vehicle: any = Array.isArray(invoice.vehicles) ? invoice.vehicles[0] || null : invoice.vehicles || null;
 
   if (invoice.public_expires_at && new Date(invoice.public_expires_at) < new Date()) {
     return (
@@ -260,12 +268,8 @@ export default async function PublicInvoicePage({ params }: PageProps) {
   const balanceDue = Math.max(Number(invoice.total_amount || 0) - paidTotal, 0);
 
   const nextServiceText =
-    invoice.jobs?.next_service_odometer || invoice.jobs?.next_service_due_date
-      ? `${
-          invoice.jobs?.next_service_odometer
-            ? invoice.jobs.next_service_odometer.toLocaleString() + " km"
-            : "-"
-        } or ${invoice.jobs?.next_service_due_date || "-"}, whichever comes first.`
+    job?.next_service_odometer || job?.next_service_due_date
+      ? `${job?.next_service_odometer ? Number(job.next_service_odometer).toLocaleString() + " km" : "-"} or ${job?.next_service_due_date || "-"}, whichever comes first.`
       : "";
 
   const attentionItems = inspectionItems.filter((item: any) =>
@@ -298,30 +302,30 @@ export default async function PublicInvoicePage({ params }: PageProps) {
               <p>Invoice Date: {formatDate(invoice.invoice_date)}</p>
               <p>Due Date: {formatDate(invoice.due_date)}</p>
               <p>Status: {formatStatus(invoice.status)}</p>
-              <p>Job: {invoice.jobs?.job_number ? `JOB-${String(invoice.jobs.job_number).padStart(5, "0")}` : "-"}</p>
+              <p>Job: {job?.job_number ? `JOB-${String(job.job_number).padStart(5, "0")}` : "-"}</p>
             </div>
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-red-600">Customer</p>
-            <h2 className="mt-2 text-xl font-bold text-slate-900">{invoice.customers?.full_name || "-"}</h2>
+            <h2 className="mt-2 text-xl font-bold text-slate-900">{customer?.full_name || "-"}</h2>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
-              <p>Phone: {invoice.customers?.phone || "-"}</p>
-              <p>Email: {invoice.customers?.email || "-"}</p>
-              <p>Address: {invoice.customers?.address || "-"}</p>
+              <p>Phone: {customer?.phone || "-"}</p>
+              <p>Email: {customer?.email || "-"}</p>
+              <p>Address: {customer?.address || "-"}</p>
             </div>
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-red-600">Vehicle</p>
             <h2 className="mt-2 text-xl font-bold uppercase text-slate-900">
-              {invoice.vehicles?.registration || "-"}
+              {vehicle?.registration || "-"}
             </h2>
             <div className="mt-4 space-y-2 text-sm text-slate-700">
-              <p>Vehicle: {[invoice.vehicles?.make, invoice.vehicles?.model].filter(Boolean).join(" ") || "-"}</p>
-              <p>Year: {invoice.vehicles?.year || "-"}</p>
-              <p>VIN: {invoice.vehicles?.vin || "-"}</p>
-              <p>Odometer: {invoice.jobs?.odometer ? `${invoice.jobs.odometer.toLocaleString()} km` : "-"}</p>
+              <p>Vehicle: {[vehicle?.make, vehicle?.model].filter(Boolean).join(" ") || "-"}</p>
+              <p>Year: {vehicle?.year || "-"}</p>
+              <p>VIN: {vehicle?.vin || "-"}</p>
+              <p>Odometer: {job?.odometer ? `${Number(job.odometer).toLocaleString()} km` : "-"}</p>
             </div>
           </div>
         </section>
@@ -366,11 +370,11 @@ export default async function PublicInvoicePage({ params }: PageProps) {
               </table>
             </div>
 
-            {(invoice.jobs?.customer_complaint || invoice.jobs?.work_completed || invoice.jobs?.recommendations) && (
+            {(job?.customer_complaint || job?.work_completed || job?.recommendations) && (
               <div className="mt-6 grid gap-4">
-                {invoice.jobs?.customer_complaint && <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700"><p className="font-semibold text-slate-900">Customer Request</p><p className="mt-1 whitespace-pre-wrap">{invoice.jobs.customer_complaint}</p></div>}
-                {invoice.jobs?.work_completed && <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700"><p className="font-semibold text-slate-900">Work Completed</p><p className="mt-1 whitespace-pre-wrap">{invoice.jobs.work_completed}</p></div>}
-                {invoice.jobs?.recommendations && <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700"><p className="font-semibold text-slate-900">Recommendations</p><p className="mt-1 whitespace-pre-wrap">{invoice.jobs.recommendations}</p></div>}
+                {job?.customer_complaint && <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700"><p className="font-semibold text-slate-900">Customer Request</p><p className="mt-1 whitespace-pre-wrap">{job.customer_complaint}</p></div>}
+                {job?.work_completed && <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700"><p className="font-semibold text-slate-900">Work Completed</p><p className="mt-1 whitespace-pre-wrap">{job.work_completed}</p></div>}
+                {job?.recommendations && <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700"><p className="font-semibold text-slate-900">Recommendations</p><p className="mt-1 whitespace-pre-wrap">{job.recommendations}</p></div>}
               </div>
             )}
           </div>
