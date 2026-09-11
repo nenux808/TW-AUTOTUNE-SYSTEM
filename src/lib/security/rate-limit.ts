@@ -22,6 +22,10 @@ type RateLimitOptions = {
   failOpen?: boolean;
 };
 
+type HeaderLike = {
+  get(name: string): string | null;
+};
+
 function hashBucketKey(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -30,7 +34,7 @@ export function getClientIp(request: Request) {
   return getClientIpFromHeaders(request.headers);
 }
 
-export function getClientIpFromHeaders(headers: Headers | Readonly<Headers>) {
+export function getClientIpFromHeaders(headers: HeaderLike) {
   const forwardedFor = headers.get("x-forwarded-for");
 
   if (forwardedFor) {
