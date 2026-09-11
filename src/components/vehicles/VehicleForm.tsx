@@ -1,38 +1,102 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Customer } from "@/types/customer";
+import type { Vehicle } from "@/types/vehicle";
+
+type VehicleFormState = {
+  customer_id: string;
+  registration: string;
+  make: string;
+  model: string;
+  year: string;
+  vin: string;
+  engine_number: string;
+  odometer: string;
+  fuel_type: string;
+  transmission: string;
+  colour: string;
+  vehicle_type: string;
+  notes: string;
+};
 
 type Props = {
   customers: Customer[];
-  onVehicleAdded: (vehicleId?: string, customerId?: string) => void; initialCustomerId?: string;
+  onVehicleAdded?: (vehicleId?: string, customerId?: string) => void;
+  onVehicleSaved?: (vehicleId?: string, customerId?: string) => void;
+  initialCustomerId?: string;
+  editingVehicle?: Vehicle | null;
+  onCancelEdit?: () => void;
 };
 
-export default function VehicleForm({ customers, onVehicleAdded, initialCustomerId }: Props) {
+const emptyForm = (initialCustomerId = ""): VehicleFormState => ({
+  customer_id: initialCustomerId,
+  registration: "",
+  make: "",
+  model: "",
+  year: "",
+  vin: "",
+  engine_number: "",
+  odometer: "",
+  fuel_type: "",
+  transmission: "",
+  colour: "",
+  vehicle_type: "standard",
+  notes: "",
+});
+
+function formFromVehicle(vehicle: Vehicle): VehicleFormState {
+  return {
+    customer_id: vehicle.customer_id || "",
+    registration: vehicle.registration || "",
+    make: vehicle.make || "",
+    model: vehicle.model || "",
+    year: vehicle.year ? String(vehicle.year) : "",
+    vin: vehicle.vin || "",
+    engine_number: vehicle.engine_number || "",
+    odometer: vehicle.odometer ? String(vehicle.odometer) : "",
+    fuel_type: vehicle.fuel_type || "",
+    transmission: vehicle.transmission || "",
+    colour: vehicle.colour || "",
+    vehicle_type: vehicle.vehicle_type || "standard",
+    notes: vehicle.notes || "",
+  };
+}
+
+export default function VehicleForm({
+  customers,
+  onVehicleAdded,
+  onVehicleSaved,
+  initialCustomerId,
+  editingVehicle,
+  onCancelEdit,
+}: Props) {
   const supabase = createClient();
+  const isEditing = Boolean(editingVehicle?.id);
 
-  const [form, setForm] = useState({
-    customer_id: initialCustomerId || "",
-    registration: "",
-    make: "",
-    model: "",
-    year: "",
-    vin: "",
-    engine_number: "",
-    odometer: "",
-    fuel_type: "",
-    transmission: "",
-    colour: "",
-    vehicle_type: "standard",
-    notes: "",
-  });
+  const initialForm = useMemo(
+    () => (editingVehicle ? formFromVehicle(editingVehicle) : emptyForm(initialCustomerId || "")),
+    [editingVehicle, initialCustomerId]
+  );
 
+  const [form, setForm] = useState<VehicleFormState>(initialForm);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  function updateField(field: string, value: string) {
+  useEffect(() => {
+    setForm(initialForm);
+    setMessage("");
+  }, [initialForm]);
+
+  function updateField(field: keyof VehicleFormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function resetForm() {
+    setForm(emptyForm(initialCustomerId || ""));
+    setMessage("");
+    onCancelEdit?.();
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -46,7 +110,7 @@ export default function VehicleForm({ customers, onVehicleAdded, initialCustomer
       return;
     }
 
-    const { data, error } = await supabase.from("vehicles").insert({
+    const payload = {
       customer_id: form.customer_id,
       registration: form.registration.trim().toUpperCase(),
       make: form.make.trim() || null,
@@ -60,7 +124,31 @@ export default function VehicleForm({ customers, onVehicleAdded, initialCustomer
       colour: form.colour.trim() || null,
       vehicle_type: form.vehicle_type,
       notes: form.notes.trim() || null,
-    }).select("id").single();
+    };
+
+    if (isEditing && editingVehicle?.id) {
+      const { error } = await supabase
+        .from("vehicles")
+        .update(payload)
+        .eq("id", editingVehicle.id);
+
+      if (error) {
+        setMessage(error.message);
+        setLoading(false);
+        return;
+      }
+
+      setMessage("Vehicle updated successfully.");
+      onVehicleSaved?.(editingVehicle.id, form.customer_id);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("vehicles")
+      .insert(payload)
+      .select("id")
+      .single();
 
     if (error) {
       setMessage(error.message);
@@ -68,32 +156,39 @@ export default function VehicleForm({ customers, onVehicleAdded, initialCustomer
       return;
     }
 
-    setForm({
-      customer_id: initialCustomerId || "",
-      registration: "",
-      make: "",
-      model: "",
-      year: "",
-      vin: "",
-      engine_number: "",
-      odometer: "",
-      fuel_type: "",
-      transmission: "",
-      colour: "",
-      vehicle_type: "standard",
-      notes: "",
-    });
-
+    setForm(emptyForm(initialCustomerId || ""));
     setMessage("Vehicle added successfully.");
-    onVehicleAdded(data?.id, form.customer_id);
+    onVehicleAdded?.(data?.id, form.customer_id);
+    onVehicleSaved?.(data?.id, form.customer_id);
     setLoading(false);
   }
 
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-sm">
-      <div>
-        <p className="text-sm font-medium text-red-600">New Vehicle</p>
-        <h2 className="mt-1 text-2xl font-bold text-slate-900">Add vehicle</h2>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-red-600">
+            {isEditing ? "Edit Vehicle" : "New Vehicle"}
+          </p>
+          <h2 className="mt-1 text-2xl font-bold text-slate-900">
+            {isEditing ? "Update vehicle" : "Add vehicle"}
+          </h2>
+          {isEditing && (
+            <p className="mt-1 text-sm text-slate-500">
+              Correct registration, odometer, VIN, fuel type and other vehicle details.
+            </p>
+          )}
+        </div>
+
+        {isEditing && (
+          <button
+            type="button"
+            onClick={resetForm}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+        )}
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -171,7 +266,7 @@ export default function VehicleForm({ customers, onVehicleAdded, initialCustomer
         </div>
 
         <div>
-          <label className="text-sm font-medium text-slate-700">Odometer</label>
+          <label className="text-sm font-medium text-slate-700">Odometer / mileage</label>
           <input
             type="number"
             value={form.odometer}
@@ -263,10 +358,8 @@ export default function VehicleForm({ customers, onVehicleAdded, initialCustomer
         disabled={loading}
         className="mt-6 rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-60"
       >
-        {loading ? "Saving..." : "Add Vehicle"}
+        {loading ? "Saving..." : isEditing ? "Update Vehicle" : "Add Vehicle"}
       </button>
     </form>
   );
 }
-
-
