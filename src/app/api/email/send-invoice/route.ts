@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireApiUser } from "@/lib/auth/server";
+import { isServiceRoleConfigured } from "@/lib/supabase/service";
 import {
   appUrl,
   formatInvoiceNumber,
@@ -22,15 +23,8 @@ function publicInvoiceExpiryDate() {
   return expiresAt.toISOString();
 }
 
-function isMissingPublicExpiryColumn(error: any) {
-  const message = String(error?.message || error || "").toLowerCase();
-
-  return (
-    message.includes("public_expires_at") &&
-    (message.includes("schema cache") ||
-      message.includes("could not find") ||
-      message.includes("column"))
-  );
+function safeApiError(message = "Unable to complete this request right now.", status = 500) {
+  return NextResponse.json({ error: message }, { status });
 }
 
 export async function POST(request: Request) {
@@ -41,14 +35,18 @@ export async function POST(request: Request) {
       return auth.response;
     }
 
+    if (!isServiceRoleConfigured()) {
+      return safeApiError(
+        "Invoice email is temporarily unavailable because secure public invoice access is not configured.",
+        503
+      );
+    }
+
     const supabase = auth.supabase;
     const { invoiceId } = await request.json();
 
     if (!invoiceId) {
-      return NextResponse.json(
-        { error: "invoiceId is required." },
-        { status: 400 }
-      );
+      return safeApiError("invoiceId is required.", 400);
     }
 
     const clientIp = getClientIp(request);
@@ -59,6 +57,7 @@ export async function POST(request: Request) {
       key: actorId,
       limit: 5,
       windowMs: 60 * 1000,
+      failOpen: false,
     });
 
     if (!userLimit.allowed) {
@@ -73,6 +72,7 @@ export async function POST(request: Request) {
       key: String(invoiceId),
       limit: 20,
       windowMs: 60 * 60 * 1000,
+      failOpen: false,
     });
 
     if (!invoiceLimit.allowed) {
@@ -93,19 +93,13 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !invoice) {
-      return NextResponse.json(
-        { error: error?.message || "Invoice not found." },
-        { status: 404 }
-      );
+      return safeApiError("Invoice not found.", 404);
     }
 
     const customerEmail = invoice.customers?.email;
 
     if (!customerEmail) {
-      return NextResponse.json(
-        { error: "Customer does not have an email address." },
-        { status: 400 }
-      );
+      return safeApiError("Customer does not have an email address.", 400);
     }
 
     const invoiceNumber = formatInvoiceNumber(invoice.invoice_number);
@@ -117,7 +111,7 @@ export async function POST(request: Request) {
       publicToken = randomUUID();
     }
 
-    const updateWithExpiry = await supabase
+    const updatePublicLink = await supabase
       .from("invoices")
       .update({
         public_token: publicToken,
@@ -126,32 +120,9 @@ export async function POST(request: Request) {
       })
       .eq("id", invoice.id);
 
-    if (updateWithExpiry.error) {
-      if (!isMissingPublicExpiryColumn(updateWithExpiry.error)) {
-        return NextResponse.json(
-          { error: updateWithExpiry.error.message },
-          { status: 500 }
-        );
-      }
-
-      // Emergency fallback: if Supabase/PostgREST schema cache has not picked up
-      // the new public_expires_at column yet, keep invoice emailing working and
-      // update only the existing public link fields. Run the SQL + schema reload
-      // to re-enable expiry enforcement.
-      const updateWithoutExpiry = await supabase
-        .from("invoices")
-        .update({
-          public_token: publicToken,
-          public_enabled: true,
-        })
-        .eq("id", invoice.id);
-
-      if (updateWithoutExpiry.error) {
-        return NextResponse.json(
-          { error: updateWithoutExpiry.error.message },
-          { status: 500 }
-        );
-      }
+    if (updatePublicLink.error) {
+      console.error("Public invoice link update failed", updatePublicLink.error);
+      return safeApiError("Unable to prepare secure invoice link.", 500);
     }
 
     const invoiceLink = `${appUrl().replace(/\/$/, "")}/invoice-view/${publicToken}`;
@@ -224,17 +195,13 @@ export async function POST(request: Request) {
     });
 
     if (sendResult.error) {
-      return NextResponse.json(
-        { error: sendResult.error.message },
-        { status: 500 }
-      );
+      console.error("Invoice email send failed", sendResult.error);
+      return safeApiError("Invoice email could not be sent.", 500);
     }
 
     return NextResponse.json({ ok: true, messageId: providerId });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || "Failed to send invoice email." },
-      { status: 500 }
-    );
+    console.error("Invoice email route failed", error);
+    return safeApiError("Failed to send invoice email.", 500);
   }
 }
