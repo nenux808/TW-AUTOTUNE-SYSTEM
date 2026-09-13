@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { requireApiUser } from "@/lib/auth/server";
-import { isServiceRoleConfigured } from "@/lib/supabase/service";
 import {
   appUrl,
   formatInvoiceNumber,
@@ -15,14 +14,6 @@ import {
   rateLimitHeaders,
 } from "@/lib/security/rate-limit";
 
-const PUBLIC_INVOICE_EXPIRY_DAYS = 30;
-
-function publicInvoiceExpiryDate() {
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + PUBLIC_INVOICE_EXPIRY_DAYS);
-  return expiresAt.toISOString();
-}
-
 function safeApiError(message = "Unable to complete this request right now.", status = 500) {
   return NextResponse.json({ error: message }, { status });
 }
@@ -33,13 +24,6 @@ export async function POST(request: Request) {
 
     if (auth.response) {
       return auth.response;
-    }
-
-    if (!isServiceRoleConfigured()) {
-      return safeApiError(
-        "Invoice email is temporarily unavailable because secure public invoice access is not configured.",
-        503
-      );
     }
 
     const supabase = auth.supabase;
@@ -103,26 +87,19 @@ export async function POST(request: Request) {
     }
 
     const invoiceNumber = formatInvoiceNumber(invoice.invoice_number);
-
-    let publicToken = invoice.public_token;
-    const publicExpiresAt = publicInvoiceExpiryDate();
-
-    if (!publicToken) {
-      publicToken = randomUUID();
-    }
+    const publicToken = invoice.public_token || randomUUID();
 
     const updatePublicLink = await supabase
       .from("invoices")
       .update({
         public_token: publicToken,
         public_enabled: true,
-        public_expires_at: publicExpiresAt,
       })
       .eq("id", invoice.id);
 
     if (updatePublicLink.error) {
       console.error("Public invoice link update failed", updatePublicLink.error);
-      return safeApiError("Unable to prepare secure invoice link.", 500);
+      return safeApiError("Unable to prepare invoice link.", 500);
     }
 
     const invoiceLink = `${appUrl().replace(/\/$/, "")}/invoice-view/${publicToken}`;
@@ -132,13 +109,9 @@ export async function POST(request: Request) {
       <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6;">
         <h2 style="margin-bottom: 4px;">TW AUTO TUNE</h2>
         <p style="margin-top: 0;">Invoice from TW AUTO TUNE</p>
-
         <hr />
-
         <p>Hi ${invoice.customers?.full_name || "Customer"},</p>
-
         <p>Your invoice is ready. Please click the button below to view the full customer copy invoice and service report.</p>
-
         <table style="border-collapse: collapse; width: 100%; max-width: 520px;">
           <tr>
             <td style="padding: 8px; border: 1px solid #e5e7eb;"><strong>Invoice</strong></td>
@@ -159,14 +132,12 @@ export async function POST(request: Request) {
             <td style="padding: 8px; border: 1px solid #e5e7eb;">${formatMoney(Number(invoice.balance_due || 0))}</td>
           </tr>
         </table>
-
         <p style="margin-top: 24px;">
           <a href="${invoiceLink}" style="background:#dc2626;color:white;padding:12px 18px;text-decoration:none;border-radius:10px;font-weight:bold;display:inline-block;">
             View Invoice
           </a>
         </p>
-
-        <p>This secure link expires in ${PUBLIC_INVOICE_EXPIRY_DAYS} days.</p>
+        <p>You can use this link to view your invoice when needed.</p>
         <p>Thank you for choosing TW AUTO TUNE.</p>
         <p style="font-size:12px;color:#6b7280;">System by Nenux Web Solutions</p>
       </div>
