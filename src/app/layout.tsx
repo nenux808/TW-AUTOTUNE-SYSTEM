@@ -5,6 +5,7 @@ import { productBrand } from "@/lib/product/branding";
 import "./globals.css";
 import "./mobile.css";
 import "./card-mobile.css";
+import "./invoice-logo.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
