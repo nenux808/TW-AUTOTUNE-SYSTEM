@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import NenuxCredit from "@/components/branding/NenuxCredit";
+import TwAutoTuneLogo from "@/components/branding/TwAutoTuneLogo";
 
 function timeout(ms: number) {
   return new Promise((_, reject) => {
@@ -68,10 +69,10 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10">
-      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white p-8 shadow-2xl">
         <div className="text-center">
-          <p className="text-sm font-semibold text-red-600">TW AUTO TUNE</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
+          <TwAutoTuneLogo className="mx-auto max-w-[260px]" imageClassName="rounded-xl shadow-sm" />
+          <h1 className="mt-5 text-3xl font-bold text-slate-900">
             Staff Login
           </h1>
           <p className="mt-2 text-sm text-slate-500">
@@ -121,7 +122,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <p className="mt-6 text-center text-xs font-medium text-slate-400">
           TW AUTO TUNE Management System
         </p>
 
