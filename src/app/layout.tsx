@@ -24,7 +24,12 @@ export const metadata: Metadata = {
   },
   description: productBrand.description,
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/tw-autotune-favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/tw-autotune-favicon.svg",
+    apple: "/tw-autotune-favicon.svg",
   },
 };
 
