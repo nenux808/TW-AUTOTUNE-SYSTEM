@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import PublicPrintButton from "@/components/invoices/PublicPrintButton";
+import TwAutoTuneLogo from "@/components/branding/TwAutoTuneLogo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -63,8 +64,8 @@ function UnavailableInvoice() {
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-10 text-slate-950">
       <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow-sm">
-        <p className="text-sm font-bold text-red-600">TW AUTO TUNE</p>
-        <h1 className="mt-3 text-2xl font-bold">Invoice not available</h1>
+        <TwAutoTuneLogo className="max-w-[240px] items-start" imageClassName="rounded-xl" />
+        <h1 className="mt-5 text-2xl font-bold">Invoice not available</h1>
         <p className="mt-3 text-sm text-slate-600">
           This invoice link is invalid or no longer available. Please contact TW AUTO TUNE.
         </p>
@@ -187,12 +188,15 @@ export default async function PublicInvoicePage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-slate-100 px-6 py-6 text-slate-950">
       <div className="mx-auto max-w-6xl">
-        <section className="rounded-2xl bg-slate-950 p-6 text-white shadow-sm">
-          <p className="text-sm font-bold text-red-500">TW AUTO TUNE</p>
-          <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Tax Invoice {formatInvoiceNumber(invoice.invoice_number)}</h1>
-              <p className="mt-1 text-slate-200">Customer invoice and service summary.</p>
+        <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <TwAutoTuneLogo className="w-[220px] sm:w-[260px]" imageClassName="rounded-2xl shadow-lg ring-1 ring-white/10" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-red-400">Customer invoice</p>
+                <h1 className="mt-2 text-3xl font-bold">Tax Invoice {formatInvoiceNumber(invoice.invoice_number)}</h1>
+                <p className="mt-1 text-slate-200">Customer invoice and service summary.</p>
+              </div>
             </div>
             <PublicPrintButton />
           </div>
