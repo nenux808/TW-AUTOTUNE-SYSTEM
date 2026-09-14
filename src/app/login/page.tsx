@@ -11,6 +11,10 @@ function timeout(ms: number) {
   });
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function LoginPage() {
   const supabase = createClient();
 
@@ -18,6 +22,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [accessGranted, setAccessGranted] = useState(false);
 
   useEffect(() => {
     async function checkAlreadyLoggedIn() {
@@ -60,16 +65,66 @@ export default function LoginPage() {
         return;
       }
 
+      setAccessGranted(true);
+      await wait(1450);
       window.location.href = "/dashboard";
     } catch (error: any) {
       setMessage(error?.message || "Login failed. Please try again.");
+      setAccessGranted(false);
       setLoading(false);
     }
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white p-8 shadow-2xl">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10">
+      <div className="pointer-events-none absolute inset-0 opacity-60">
+        <div className="absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-600/20 blur-3xl" />
+        <div className="absolute bottom-[-120px] right-[-80px] h-[320px] w-[320px] rounded-full bg-red-500/10 blur-3xl" />
+      </div>
+
+      {accessGranted && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 px-6 backdrop-blur-md">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-red-500/30 bg-slate-950 p-8 text-center text-white shadow-[0_0_80px_rgba(220,38,38,0.35)]">
+            <div className="absolute inset-x-0 top-0 h-1 animate-pulse bg-red-600" />
+            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10 shadow-[0_0_45px_rgba(239,68,68,0.35)]">
+              <div className="h-16 w-16 animate-spin rounded-full border-4 border-red-500 border-t-transparent" />
+            </div>
+            <p className="mt-6 text-xs font-bold uppercase tracking-[0.45em] text-red-400">
+              Access Granted
+            </p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight">
+              Opening Workshop System
+            </h2>
+            <p className="mt-3 text-sm text-slate-300">
+              Verifying secure session and loading dashboard...
+            </p>
+            <div className="mt-7 h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full w-full origin-left animate-[loginLoad_1.35s_ease-in-out_forwards] rounded-full bg-red-500" />
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <span>Auth</span>
+              <span>Secure</span>
+              <span>Launch</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @keyframes loginLoad {
+          0% {
+            transform: scaleX(0.05);
+          }
+          55% {
+            transform: scaleX(0.72);
+          }
+          100% {
+            transform: scaleX(1);
+          }
+        }
+      `}</style>
+
+      <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-white p-8 shadow-2xl">
         <div className="text-center">
           <TwAutoTuneLogo className="mx-auto max-w-[260px]" imageClassName="rounded-xl shadow-sm" />
           <h1 className="mt-5 text-3xl font-bold text-slate-900">
@@ -116,9 +171,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-xl bg-red-600 px-5 py-3 font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="group relative mt-2 overflow-hidden rounded-xl bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-80"
           >
-            {loading ? "Signing in..." : "Login"}
+            <span className="absolute inset-y-0 -left-1/2 hidden w-1/2 skew-x-[-20deg] bg-white/20 blur-sm transition-all duration-700 group-hover:left-full sm:block" />
+            <span className="relative flex items-center justify-center gap-2">
+              {loading && !accessGranted && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              {accessGranted ? "Access Granted" : loading ? "Verifying..." : "Login"}
+            </span>
           </button>
         </form>
 
