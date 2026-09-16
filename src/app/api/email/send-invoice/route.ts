@@ -36,15 +36,15 @@ export async function POST(request: Request) {
     const clientIp = getClientIp(request);
     const actorId = auth.user?.id || clientIp;
 
-    // Versioned buckets avoid old stuck rate-limit rows after deployment changes.
-    // Practical workshop limit: supports normal invoice sending and retries,
-    // while still blocking accidental button spam or compromised-session abuse.
+    // Authenticated staff-only route.
+    // Keep sending available if Supabase rate-limit storage/service-role config has a problem,
+    // while still enforcing limits whenever the security_rate_limits table is reachable.
     const userLimit = await checkRateLimit({
-      namespace: "send-invoice:v2:user",
+      namespace: "send-invoice:v3:user",
       key: actorId,
       limit: 120,
       windowMs: 60 * 60 * 1000,
-      failOpen: false,
+      failOpen: true,
     });
 
     if (!userLimit.allowed) {
@@ -54,14 +54,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Per-invoice protection: one invoice can be resent for real workshop use,
-    // but cannot be spammed hundreds of times.
     const invoiceLimit = await checkRateLimit({
-      namespace: "send-invoice:v2:invoice",
+      namespace: "send-invoice:v3:invoice",
       key: String(invoiceId),
       limit: 30,
       windowMs: 60 * 60 * 1000,
-      failOpen: false,
+      failOpen: true,
     });
 
     if (!invoiceLimit.allowed) {
