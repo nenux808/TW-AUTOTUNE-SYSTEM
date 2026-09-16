@@ -36,32 +36,35 @@ export async function POST(request: Request) {
     const clientIp = getClientIp(request);
     const actorId = auth.user?.id || clientIp;
 
+    // Practical workshop limit: allows normal invoice sending/retries during busy periods,
+    // while still blocking accidental button spam or abuse from a compromised session.
     const userLimit = await checkRateLimit({
       namespace: "send-invoice:user",
       key: actorId,
-      limit: 5,
-      windowMs: 60 * 1000,
+      limit: 30,
+      windowMs: 10 * 60 * 1000,
       failOpen: false,
     });
 
     if (!userLimit.allowed) {
       return NextResponse.json(
-        { error: "Too many invoice email requests. Please wait and try again." },
+        { error: "Too many invoice email requests. Please wait a few minutes and try again." },
         { status: 429, headers: rateLimitHeaders(userLimit) }
       );
     }
 
+    // Per-invoice protection: one invoice can be resent, but not spammed repeatedly.
     const invoiceLimit = await checkRateLimit({
       namespace: "send-invoice:invoice",
       key: String(invoiceId),
-      limit: 20,
-      windowMs: 60 * 60 * 1000,
+      limit: 8,
+      windowMs: 10 * 60 * 1000,
       failOpen: false,
     });
 
     if (!invoiceLimit.allowed) {
       return NextResponse.json(
-        { error: "This invoice has been emailed too many times recently. Please wait and try again." },
+        { error: "This invoice was emailed several times recently. Please wait a few minutes before resending." },
         { status: 429, headers: rateLimitHeaders(invoiceLimit) }
       );
     }
