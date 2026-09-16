@@ -36,13 +36,14 @@ export async function POST(request: Request) {
     const clientIp = getClientIp(request);
     const actorId = auth.user?.id || clientIp;
 
-    // Practical workshop limit: allows normal invoice sending/retries during busy periods,
-    // while still blocking accidental button spam or abuse from a compromised session.
+    // Versioned buckets avoid old stuck rate-limit rows after deployment changes.
+    // Practical workshop limit: supports normal invoice sending and retries,
+    // while still blocking accidental button spam or compromised-session abuse.
     const userLimit = await checkRateLimit({
-      namespace: "send-invoice:user",
+      namespace: "send-invoice:v2:user",
       key: actorId,
-      limit: 30,
-      windowMs: 10 * 60 * 1000,
+      limit: 120,
+      windowMs: 60 * 60 * 1000,
       failOpen: false,
     });
 
@@ -53,12 +54,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Per-invoice protection: one invoice can be resent, but not spammed repeatedly.
+    // Per-invoice protection: one invoice can be resent for real workshop use,
+    // but cannot be spammed hundreds of times.
     const invoiceLimit = await checkRateLimit({
-      namespace: "send-invoice:invoice",
+      namespace: "send-invoice:v2:invoice",
       key: String(invoiceId),
-      limit: 8,
-      windowMs: 10 * 60 * 1000,
+      limit: 30,
+      windowMs: 60 * 60 * 1000,
       failOpen: false,
     });
 
