@@ -1,0 +1,336 @@
+@media print {
+  /* Compact workshop-style customer invoice sheet.
+     This only changes the printable summary sheet. The normal screen invoice and inspection report remain unchanged. */
+
+  .customer-invoice-print-compact .invoice-print-only {
+    width: 100% !important;
+    max-width: 190mm !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    color: #111827 !important;
+    font-size: 9.2px !important;
+    line-height: 1.22 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    border: 2px solid #111827 !important;
+    border-radius: 5mm !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-sheet-header {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: 54mm minmax(0, 1fr) 56mm !important;
+    gap: 4mm !important;
+    align-items: center !important;
+    min-height: 31mm !important;
+    padding: 4mm 5mm !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid #111827 !important;
+    background: linear-gradient(135deg, #020617 0%, #111827 58%, #dc2626 160%) !important;
+    color: #ffffff !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-sheet-header::before {
+    grid-column: 1 !important;
+    width: 48mm !important;
+    height: 22mm !important;
+    border-radius: 3mm !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    background-color: #000000 !important;
+    background-image: url("/tw-autotune-logo.jpeg") !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-size: contain !important;
+    box-shadow: none !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-sheet-header > div:first-of-type {
+    grid-column: 2 !important;
+    min-width: 0 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-brand {
+    display: block !important;
+    margin: 0 0 1mm !important;
+    color: #fca5a5 !important;
+    font-size: 8px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.42em !important;
+    text-transform: uppercase !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-sheet-header h1 {
+    margin: 0 !important;
+    color: #ffffff !important;
+    font-size: 19px !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-sheet-header p,
+  .customer-invoice-print-compact .invoice-print-sheet-header span {
+    margin: 0.8mm 0 0 !important;
+    color: #e5e7eb !important;
+    font-size: 8.5px !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-business {
+    grid-column: 3 !important;
+    display: grid !important;
+    gap: 0.8mm !important;
+    max-width: none !important;
+    padding: 2.5mm !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-radius: 3mm !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+    text-align: right !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-business strong {
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-details-grid {
+    display: grid !important;
+    grid-template-columns: 1.02fr 1.3fr 1.15fr !important;
+    gap: 0 !important;
+    margin: 0 !important;
+    border-bottom: 2px solid #111827 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-detail-block {
+    min-width: 0 !important;
+    padding: 3mm 4mm !important;
+    border: 0 !important;
+    border-right: 2px solid #111827 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-detail-block:last-child {
+    border-right: 0 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-detail-block h2,
+  .customer-invoice-print-compact .invoice-print-lines h2 {
+    display: block !important;
+    margin: 0 0 1.8mm !important;
+    padding: 1.1mm 2mm !important;
+    border-radius: 999px !important;
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+    font-size: 8.5px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-detail-block p,
+  .customer-invoice-print-compact .invoice-print-bank-box p {
+    display: grid !important;
+    grid-template-columns: 18mm minmax(0, 1fr) !important;
+    gap: 2mm !important;
+    margin: 0.8mm 0 !important;
+    overflow-wrap: anywhere !important;
+    color: #111827 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-detail-block strong,
+  .customer-invoice-print-compact .invoice-print-bank-box strong {
+    color: #374151 !important;
+    font-weight: 800 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-detail-block p.invoice-print-primary {
+    display: block !important;
+    margin: 0 0 2mm !important;
+    color: #020617 !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-lines {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-bottom: 2px solid #111827 !important;
+    border-radius: 0 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-lines h2 {
+    margin: 3mm 4mm 2mm !important;
+    width: max-content !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-lines table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    margin: 0 !important;
+    border-collapse: collapse !important;
+    font-size: 9px !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-lines th,
+  .customer-invoice-print-compact .invoice-print-lines td {
+    padding: 1.7mm 2.2mm !important;
+    border: 1px solid #cbd5e1 !important;
+    vertical-align: top !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-lines th {
+    background: #020617 !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-lines th:first-child { width: 46% !important; }
+  .customer-invoice-print-compact .invoice-print-lines th:nth-child(2) { width: 14% !important; }
+  .customer-invoice-print-compact .invoice-print-lines th:nth-child(3) { width: 8% !important; }
+  .customer-invoice-print-compact .invoice-print-lines th:nth-child(4) { width: 16% !important; }
+  .customer-invoice-print-compact .invoice-print-lines th:nth-child(5) { width: 16% !important; }
+
+  .customer-invoice-print-compact .invoice-print-lines tbody tr:nth-child(even) td {
+    background: #f8fafc !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-bottom-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 62mm !important;
+    gap: 0 !important;
+    margin: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-service-info {
+    display: grid !important;
+    gap: 0 !important;
+    border-right: 2px solid #111827 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-service-info > div {
+    min-height: 12mm !important;
+    padding: 3mm 4mm !important;
+    border: 0 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-service-info > div:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-service-info h3,
+  .customer-invoice-print-compact .invoice-print-bank-box h3 {
+    margin: 0 0 1mm !important;
+    color: #dc2626 !important;
+    font-size: 8.5px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-service-info p {
+    margin: 0 !important;
+    white-space: pre-wrap !important;
+    color: #111827 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-financials {
+    display: grid !important;
+    grid-template-rows: auto 1fr !important;
+    gap: 0 !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-total-box {
+    margin: 0 !important;
+    padding: 4mm !important;
+    border: 0 !important;
+    border-bottom: 2px solid #111827 !important;
+    border-radius: 0 !important;
+    background: #020617 !important;
+    color: #ffffff !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-total-box p {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 3mm !important;
+    margin: 1.2mm 0 !important;
+    color: #ffffff !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-total-box span {
+    color: #d1d5db !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-grand-total {
+    margin: 2.3mm 0 !important;
+    padding: 2.3mm 0 !important;
+    border-top: 1px solid #64748b !important;
+    border-bottom: 1px solid #64748b !important;
+    font-size: 14px !important;
+    color: #ffffff !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-grand-total span,
+  .customer-invoice-print-compact .invoice-print-grand-total strong {
+    color: #ffffff !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-bank-box {
+    margin: 0 !important;
+    padding: 3mm 4mm !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff7ed !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-bank-box p {
+    grid-template-columns: 20mm minmax(0, 1fr) !important;
+    margin: 0.8mm 0 !important;
+    font-size: 8.8px !important;
+  }
+
+  .customer-invoice-print-compact .invoice-print-footer {
+    margin: 0 !important;
+    padding: 3mm 4mm !important;
+    border-top: 2px solid #111827 !important;
+    background: #fee2e2 !important;
+    color: #7f1d1d !important;
+    text-align: center !important;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Leave inspection/report sections as the existing invoice design. */
+  .customer-invoice-print-compact .invoice-inspection-print,
+  .customer-invoice-print-compact .privacy-note-print,
+  .customer-invoice-print-compact section:not(.invoice-print-only):not(.invoice-screen-print-source) {
+    break-inside: auto !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 9mm;
+  }
+}
