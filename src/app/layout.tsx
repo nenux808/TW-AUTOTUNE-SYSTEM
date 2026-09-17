@@ -6,6 +6,7 @@ import "./globals.css";
 import "./mobile.css";
 import "./card-mobile.css";
 import "./invoice-logo.css";
+import "./workshop-invoice-print.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
