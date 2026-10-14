@@ -18,12 +18,64 @@ function safeApiError(message = "Unable to complete this request right now.", st
   return NextResponse.json({ error: message }, { status });
 }
 
+function safeProviderMessage(error: any) {
+  const raw =
+    error?.message ||
+    error?.name ||
+    (typeof error === "string" ? error : "Email provider rejected the message.");
+
+  return String(raw)
+    .replace(/re_[A-Za-z0-9_-]+/g, "[hidden-api-key]")
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [hidden]")
+    .slice(0, 240);
+}
+
+async function logEmailAttempt({
+  supabase,
+  invoice,
+  customerEmail,
+  subject,
+  status,
+  providerId,
+  errorMessage,
+}: {
+  supabase: any;
+  invoice: any;
+  customerEmail: string;
+  subject: string;
+  status: "sent" | "failed";
+  providerId: string | null;
+  errorMessage: string | null;
+}) {
+  const { error } = await supabase.from("email_logs").insert({
+    email_type: "invoice",
+    recipient_email: customerEmail,
+    recipient_name: invoice.customers?.full_name || null,
+    customer_id: invoice.customers?.id || invoice.customer_id || null,
+    vehicle_id: invoice.vehicles?.id || invoice.vehicle_id || null,
+    invoice_id: invoice.id,
+    subject,
+    status,
+    provider_message_id: providerId,
+    error_message: errorMessage,
+  });
+
+  if (error) {
+    console.error("Invoice email log insert failed", error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const auth = await requireApiUser(["owner", "mechanic", "front_desk"]);
 
     if (auth.response) {
       return auth.response;
+    }
+
+    if (!process.env.RESEND_API_KEY) {
+      console.error("Invoice email failed: RESEND_API_KEY is missing.");
+      return safeApiError("Email is not configured. Missing RESEND_API_KEY in Vercel.", 500);
     }
 
     const supabase = auth.supabase;
@@ -40,7 +92,7 @@ export async function POST(request: Request) {
     // Keep sending available if Supabase rate-limit storage/service-role config has a problem,
     // while still enforcing limits whenever the security_rate_limits table is reachable.
     const userLimit = await checkRateLimit({
-      namespace: "send-invoice:v3:user",
+      namespace: "send-invoice:v4:user",
       key: actorId,
       limit: 120,
       windowMs: 60 * 60 * 1000,
@@ -55,7 +107,7 @@ export async function POST(request: Request) {
     }
 
     const invoiceLimit = await checkRateLimit({
-      namespace: "send-invoice:v3:invoice",
+      namespace: "send-invoice:v4:invoice",
       key: String(invoiceId),
       limit: 30,
       windowMs: 60 * 60 * 1000,
@@ -83,10 +135,14 @@ export async function POST(request: Request) {
       return safeApiError("Invoice not found.", 404);
     }
 
-    const customerEmail = invoice.customers?.email;
+    const customerEmail = String(invoice.customers?.email || "").trim();
 
     if (!customerEmail) {
       return safeApiError("Customer does not have an email address.", 400);
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(customerEmail)) {
+      return safeApiError("Customer email address looks invalid. Please update the customer email and try again.", 400);
     }
 
     const invoiceNumber = formatInvoiceNumber(invoice.invoice_number);
@@ -107,6 +163,7 @@ export async function POST(request: Request) {
 
     const invoiceLink = `${appUrl().replace(/\/$/, "")}/invoice-view/${publicToken}`;
     const subject = `${invoiceNumber} - TW AUTO TUNE Invoice`;
+    const sender = fromEmail();
 
     const html = `
       <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6;">
@@ -146,36 +203,54 @@ export async function POST(request: Request) {
       </div>
     `;
 
+    const text = `TW AUTO TUNE\n\nHi ${invoice.customers?.full_name || "Customer"},\n\nYour invoice ${invoiceNumber} is ready.\nView invoice: ${invoiceLink}\n\nTotal: ${formatMoney(Number(invoice.total_amount || 0))}\nBalance Due: ${formatMoney(Number(invoice.balance_due || 0))}\n\nThank you for choosing TW AUTO TUNE.`;
+
     const sendResult = await resend.emails.send({
-      from: fromEmail(),
+      from: sender,
       to: customerEmail,
       subject,
       html,
+      text,
     });
 
     const providerId = sendResult.data?.id || null;
 
-    await supabase.from("email_logs").insert({
-      email_type: "invoice",
-      recipient_email: customerEmail,
-      recipient_name: invoice.customers?.full_name || null,
-      customer_id: invoice.customers?.id || invoice.customer_id || null,
-      vehicle_id: invoice.vehicles?.id || invoice.vehicle_id || null,
-      invoice_id: invoice.id,
-      subject,
-      status: sendResult.error ? "failed" : "sent",
-      provider_message_id: providerId,
-      error_message: sendResult.error?.message || null,
-    });
-
     if (sendResult.error) {
-      console.error("Invoice email send failed", sendResult.error);
-      return safeApiError("Invoice email could not be sent.", 500);
+      const providerMessage = safeProviderMessage(sendResult.error);
+      console.error("Invoice email send failed", {
+        providerMessage,
+        customerEmail,
+        invoiceId: invoice.id,
+        from: sender,
+      });
+
+      await logEmailAttempt({
+        supabase,
+        invoice,
+        customerEmail,
+        subject,
+        status: "failed",
+        providerId,
+        errorMessage: providerMessage,
+      });
+
+      return safeApiError(`Email provider error: ${providerMessage}`, 502);
     }
+
+    await logEmailAttempt({
+      supabase,
+      invoice,
+      customerEmail,
+      subject,
+      status: "sent",
+      providerId,
+      errorMessage: null,
+    });
 
     return NextResponse.json({ ok: true, messageId: providerId });
   } catch (error: any) {
-    console.error("Invoice email route failed", error);
-    return safeApiError("Failed to send invoice email.", 500);
+    const message = safeProviderMessage(error);
+    console.error("Invoice email route failed", message);
+    return safeApiError(`Failed to send invoice email: ${message}`, 500);
   }
 }
