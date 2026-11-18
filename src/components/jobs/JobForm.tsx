@@ -52,18 +52,28 @@ function addMonths(date: Date, months: number) {
 }
 
 function toDateInputValue(date: Date) {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function nextServiceDateFor(jobDate: string) {
+  const date = new Date(`${jobDate}T12:00:00`);
+  return toDateInputValue(addMonths(date, 6));
 }
 
 export default function JobForm({ customers, vehicles, onJobAdded, initialCustomerId, initialVehicleId }: Props) {
   const supabase = createClient();
 
-  const defaultNextServiceDate = toDateInputValue(addMonths(new Date(), 6));
+  const today = toDateInputValue(new Date());
+  const defaultNextServiceDate = nextServiceDateFor(today);
 
   const [form, setForm] = useState({
     customer_id: initialCustomerId || "",
     vehicle_id: initialVehicleId || "",
     job_type: "service",
+    job_date: today,
     priority: "normal",
     status: "new",
     odometer: "",
@@ -94,6 +104,14 @@ export default function JobForm({ customers, vehicles, onJobAdded, initialCustom
 
   function updateField(field: string, value: string) {
     setForm((prev) => {
+      if (field === "job_date") {
+        return {
+          ...prev,
+          job_date: value,
+          next_service_due_date: value ? nextServiceDateFor(value) : "",
+        };
+      }
+
       if (field === "customer_id") {
         return { ...prev, customer_id: value, vehicle_id: "" };
       }
@@ -163,6 +181,14 @@ export default function JobForm({ customers, vehicles, onJobAdded, initialCustom
       return;
     }
 
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.job_date) ||
+        Number.isNaN(new Date(`${form.job_date}T12:00:00`).getTime()) ||
+        form.job_date > today) {
+      setMessage("Choose a valid job date (today or an earlier date).");
+      setLoading(false);
+      return;
+    }
+
     const complaintFromButtons = selectedReasons.length
       ? selectedReasons.join(", ")
       : "";
@@ -175,6 +201,7 @@ export default function JobForm({ customers, vehicles, onJobAdded, initialCustom
       customer_id: form.customer_id,
       vehicle_id: form.vehicle_id,
       job_type: form.job_type,
+      job_date: form.job_date,
       priority: form.priority,
       status: form.status,
       odometer: form.odometer ? Number(form.odometer) : null,
@@ -208,6 +235,7 @@ export default function JobForm({ customers, vehicles, onJobAdded, initialCustom
       customer_id: initialCustomerId || "",
       vehicle_id: initialVehicleId || "",
       job_type: "service",
+      job_date: today,
       priority: "normal",
       status: "new",
       odometer: "",
@@ -239,6 +267,23 @@ export default function JobForm({ customers, vehicles, onJobAdded, initialCustom
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="md:col-span-2 rounded-xl border border-red-100 bg-red-50 p-4">
+          <label htmlFor="job-date" className="block text-sm font-bold text-slate-900">
+            Job Date *
+          </label>
+          <p className="mt-1 text-xs text-slate-600">
+            Select when the work actually happened. Use an older date to record missing historical jobs.
+          </p>
+          <input
+            id="job-date"
+            type="date"
+            required
+            max={today}
+            value={form.job_date}
+            onChange={(e) => updateField("job_date", e.target.value)}
+            className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-red-500"
+          />
+        </div>
         <div className="md:col-span-2">
           <label className="text-sm font-medium text-slate-700">Customer *</label>
           <SearchableCustomerSelect
@@ -338,7 +383,7 @@ export default function JobForm({ customers, vehicles, onJobAdded, initialCustom
               <div>
                 <p className="font-bold text-slate-900">Next Service Reminder</p>
                 <p className="mt-1 text-sm text-slate-600">
-                  Select the next service interval. Due date is automatically set to 6 months.
+                  Select the next service interval. Due date defaults to 6 months after the selected job date.
                 </p>
               </div>
 
