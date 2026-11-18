@@ -32,6 +32,7 @@ function jobSearchText(job: Job) {
     job.vehicles?.model,
     job.vehicles?.year,
     job.odometer,
+    job.job_date,
   ]
     .map(normaliseSearchText)
     .join(" ");
@@ -106,7 +107,7 @@ export default function JobList({ jobs }: Props) {
               <th className="whitespace-nowrap px-4 py-3">Odometer</th>
               <th className="whitespace-nowrap px-4 py-3">Status</th>
               <th className="whitespace-nowrap px-4 py-3">Safety</th>
-              <th className="whitespace-nowrap px-4 py-3">Created</th>
+              <th className="whitespace-nowrap px-4 py-3">Job Date</th>
               <th className="whitespace-nowrap px-4 py-3">Action</th>
             </tr>
           </thead>
@@ -166,7 +167,9 @@ export default function JobList({ jobs }: Props) {
                   </td>
 
                   <td className="whitespace-nowrap px-4 py-3 text-slate-700">
-                    {new Date(job.created_at).toLocaleDateString()}
+                    {job.job_date
+                      ? new Date(`${job.job_date}T12:00:00`).toLocaleDateString("en-AU")
+                      : new Date(job.created_at).toLocaleDateString("en-AU")}
                   </td>
 
                   <td className="whitespace-nowrap px-4 py-3">
