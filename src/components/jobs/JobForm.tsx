@@ -226,7 +226,15 @@ export default function JobForm({ customers, vehicles, onJobAdded, initialCustom
     });
 
     if (error) {
-      setMessage(error.message);
+      const needsJobDateMigration =
+        /job_date/i.test(error.message) &&
+        (/does not exist|schema cache|could not find|unknown column/i.test(error.message) ||
+          error.code === "42703" || error.code === "PGRST204");
+      setMessage(
+        needsJobDateMigration
+          ? "Job was not saved. The workshop database needs the job_date_history.sql migration in Supabase SQL Editor before historical jobs can be recorded."
+          : error.message
+      );
       setLoading(false);
       return;
     }
