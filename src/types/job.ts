@@ -18,6 +18,7 @@
   safety_status: string | null;
   estimated_total: number | null;
   final_total: number | null;
+  job_date: string | null;
   created_at: string;
   completed_at: string | null;
   customers?: {
