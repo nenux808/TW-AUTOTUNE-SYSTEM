@@ -40,7 +40,7 @@ export default function JobsPage() {
     const jobRes = await supabase
       .from("jobs")
       .select("*, customers(full_name, phone), vehicles(registration, make, model, year)")
-      .order("created_at", { ascending: false });
+      .order("job_date", { ascending: false });
 
     const errors = [
       customerRes.error ? `Customers: ${customerRes.error.message}` : "",
