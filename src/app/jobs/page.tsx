@@ -37,10 +37,26 @@ export default function JobsPage() {
       .select("*, customers(full_name, phone)")
       .order("created_at", { ascending: false });
 
-    const jobRes = await supabase
+    // During rollout, older databases may not have the job_date migration yet.
+    // Keep existing repair orders visible by falling back to their creation timestamp.
+    let jobRes = await supabase
       .from("jobs")
       .select("*, customers(full_name, phone), vehicles(registration, make, model, year)")
       .order("job_date", { ascending: false });
+
+    const missingJobDateColumn = Boolean(
+      jobRes.error &&
+      (/job_date/i.test(jobRes.error.message) &&
+       (/does not exist|schema cache|could not find|unknown column/i.test(jobRes.error.message) ||
+        jobRes.error.code === "42703" || jobRes.error.code === "PGRST204"))
+    );
+
+    if (missingJobDateColumn) {
+      jobRes = await supabase
+        .from("jobs")
+        .select("*, customers(full_name, phone), vehicles(registration, make, model, year)")
+        .order("created_at", { ascending: false });
+    }
 
     const errors = [
       customerRes.error ? `Customers: ${customerRes.error.message}` : "",
@@ -50,10 +66,14 @@ export default function JobsPage() {
 
     const loadedInfo = `Loaded customers: ${customerRes.data?.length || 0}, vehicles: ${vehicleRes.data?.length || 0}, jobs: ${jobRes.data?.length || 0}`;
 
-    if (errors.length > 0) {
+    if (missingJobDateColumn && !jobRes.error) {
+      setDebugMessage(
+        "Existing jobs are shown using their creation dates. Historical job dates require the Supabase job_date_history.sql migration before new dated jobs can be saved."
+      );
+    } else if (errors.length > 0) {
       setDebugMessage(`${loadedInfo} | ${errors.join(" | ")}`);
     } else {
-      setDebugMessage(loadedInfo);
+      setDebugMessage("");
     }
 
     setCustomers((customerRes.data || []) as Customer[]);
